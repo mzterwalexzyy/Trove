@@ -44,9 +44,26 @@ idempotency negative cases.
   funding transaction. `scripts/seed-bounties.mjs` refuses to run if escrow
   cannot cover the total, so the app can never advertise more than it holds.
 
+- **Deployed**: https://nimiq-bounty.vercel.app, repo
+  https://github.com/mzterwalexzyy/nimiq-bounty (public, MIT).
+- **Production audit passed.** `scripts/audit-db.mjs` and
+  `scripts/audit-concurrency.mjs` both green. Three real bugs were found and
+  fixed: parallel funding returned 500s (read-then-insert race, now an atomic
+  upsert plus compare-and-set activation); winner selection had no atomicity
+  (four parallel calls all succeeded, now compare-and-set); and
+  `NUXT_PUBLIC_ESCROW_ADDRESS` truncated at the spaces in a Nimiq address,
+  which would have rejected every funding payment in production. The escrow
+  address is now derived from the key and the configured copy is deleted.
+- **Motion layer shipped**: staggered scroll reveals, a shared transaction
+  timeline for funding and payout, toasts, press feedback, bottom-sheet
+  transitions, animated counters. Transform/opacity only;
+  `prefers-reduced-motion` collapses it.
+
 ### Not done
 
-- P1 polish: OG images, share links, toasts, richer empty/skeleton states.
+- **Referral and social distribution feature.** Requested but not started. See
+  §9 below for the design constraints worked out before stopping.
+- P1 polish: OG images, share links, richer empty/skeleton states.
 - P2: AI Bounty Builder, winner share cards, leaderboards, reputation.
 - Deployment, README, MIT licence, demo video, submission.
 
@@ -216,3 +233,41 @@ plus 5 bonus.
 cost points on "distinct wallets that interacted" and on the "not a prototype"
 requirement. The user chose testnet-only knowingly. Flag it in the README rather
 than let a judge discover it.
+
+---
+
+## 9. Referral feature: design constraints before writing code
+
+Requested but not implemented. These are the decisions already worked out, so
+whoever picks it up does not rediscover them.
+
+**Do not reuse the `payouts` table.** Its primary key is `bounty_id`, which is
+precisely what makes a second payout structurally impossible today. A referral
+payment needs its own table with the same discipline: claim the row before any
+NIM moves, so a concurrent call collides and aborts.
+
+**Split arithmetic must be integer Luna, remainder to the winner.**
+`referralLuna = floor(fundedLuna * 5 / 100)`, `winnerLuna = fundedLuna -
+referralLuna`. Computing both independently lets rounding lose or invent Luna.
+The two must always sum to exactly the verified funded amount, and that should
+be asserted in the payout path, not just tested.
+
+**Two transactions, two verifications.** The bounty is only `completed` once
+both the winner payout and the referral payout are confirmed on chain. A
+partial state needs to be resumable, not silently treated as done.
+
+**Anti-abuse rules that need enforcing server-side, not in the UI:** a wallet
+cannot refer itself; the referral must be recorded before the referred hunter
+submits; the referrer cannot change after submission; one referrer per
+(bounty, hunter); the creator cannot attribute referrals. A referral only
+becomes payable when the referred hunter actually wins.
+
+**Disclosure.** Paying a referral out of the reward means a 250 NIM bounty pays
+the winner 237.5 NIM. Show both figures everywhere the reward appears. A hunter
+who sees "250 NIM" and receives 237.5 has been misled, and that undermines the
+whole Proof of Reward claim.
+
+**Extend the existing escrow flow**, do not build a parallel payment system.
+`payWinner` in `server/utils/escrow.ts` already has the claim-then-broadcast
+pattern and the on-chain memo pre-check; the referral leg should mirror it with
+memo `nqb:ref:<bountyId>`.
