@@ -28,9 +28,9 @@ const shortfall = computed(() => props.rewardNim - props.fundedNim)
     >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <p class="text-[32px] leading-none font-bold tracking-tight tabular-nums"
+          <p class="text-[32px] leading-none font-bold tracking-tight"
              :class="verified ? 'text-success' : 'text-ink'">
-            {{ formatNim(verified ? fundedNim : rewardNim) }}
+            <AnimatedNumber :value="verified ? fundedNim : rewardNim" :decimals="0" />
             <span class="text-lg font-semibold">NIM</span>
           </p>
           <p class="mt-1.5 text-xs font-semibold uppercase tracking-wider"
@@ -41,9 +41,12 @@ const shortfall = computed(() => props.rewardNim - props.fundedNim)
 
         <span
           v-if="verified"
-          class="flex shrink-0 items-center gap-1.5 rounded-full bg-success px-3 py-1.5 text-[11px] font-semibold text-white"
+          class="pop-in flex shrink-0 items-center gap-1.5 rounded-full bg-success px-3 py-1.5 text-[11px] font-semibold text-white"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" class="size-3">
+          <svg
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2"
+            class="check-draw size-3"
+          >
             <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           Verified on chain

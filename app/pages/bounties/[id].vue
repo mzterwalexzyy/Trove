@@ -3,6 +3,7 @@ const route = useRoute()
 const id = route.params.id as string
 
 const { isConnected, isInsideNimiqPay, connect, connecting } = useWallet()
+const toast = useToast()
 const { data: bounty, pending, error, refresh } = await useFetch<any>(`/api/bounties/${id}`)
 
 useHead(() => ({ title: bounty.value?.title ?? 'Bounty' }))
@@ -45,6 +46,7 @@ async function submitWork() {
       timeout: 20_000,
     })
     showSubmit.value = false
+    toast.success('Submission sent. It is now under review.')
     await refresh()
   }
   catch (err: any) {
@@ -58,7 +60,7 @@ async function submitWork() {
 // Winner selection and payout
 const confirming = ref<{ submissionId: string, address: string } | null>(null)
 const paying = ref(false)
-const payStage = ref('')
+const payStage = ref<TxStage>('idle')
 const payError = ref('')
 
 async function confirmWinner() {
@@ -67,28 +69,32 @@ async function confirmWinner() {
   payError.value = ''
 
   try {
-    payStage.value = 'Recording your choice…'
+    payStage.value = 'preparing'
     await $fetch(`/api/bounties/${id}/winner`, {
       method: 'POST',
       body: { submissionId: confirming.value.submissionId },
       timeout: 20_000,
     })
 
-    payStage.value = 'Releasing NIM from escrow…'
+    payStage.value = 'wallet'
     await $fetch(`/api/bounties/${id}/payout`, { method: 'POST', timeout: 30_000 })
 
-    payStage.value = 'Confirming the payout on chain…'
+    payStage.value = 'verifying'
     await pollPayout()
 
+    payStage.value = 'confirmed'
+    toast.success('Reward released and verified on chain.')
+    await new Promise(resolve => setTimeout(resolve, 750))
     confirming.value = null
+    payStage.value = 'idle'
     await refresh()
   }
   catch (err: any) {
+    payStage.value = 'failed'
     payError.value = err?.statusMessage ?? describeError(err)
   }
   finally {
     paying.value = false
-    payStage.value = ''
   }
 }
 
@@ -152,7 +158,7 @@ async function pollPayout() {
     </div>
 
     <!-- Completed -->
-    <section v-if="bounty.payout?.status === 'verified'" class="card mt-3 px-5 py-6 text-center">
+    <section v-if="bounty.payout?.status === 'verified'" class="card pop-in mt-3 px-5 py-6 text-center">
       <span class="mx-auto flex size-16 items-center justify-center rounded-full bg-success-soft">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="size-8 text-success">
           <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
@@ -183,9 +189,9 @@ async function pollPayout() {
     <section class="card mt-3 px-5 py-4">
       <h2 class="text-[13px] font-bold">Proof of reward</h2>
       <ul class="mt-3 flex flex-col gap-2.5">
-        <li v-for="item in checklist" :key="item.label" class="flex items-center gap-2.5 text-[13px]">
+        <li v-for="(item, index) in checklist" :key="item.label" v-reveal="index" class="flex items-center gap-2.5 text-[13px]">
           <span
-            class="flex size-5 shrink-0 items-center justify-center rounded-full"
+            class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
             :class="item.done ? 'bg-success text-white' : 'bg-[#e6e4ee] text-transparent'"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" class="size-2.5">
@@ -197,7 +203,7 @@ async function pollPayout() {
       </ul>
     </section>
 
-    <section class="card mt-3 px-5 py-4">
+    <section v-reveal="0" class="card mt-3 px-5 py-4">
       <h2 class="text-[13px] font-bold">Description</h2>
       <p class="mt-2 text-[14px] leading-relaxed whitespace-pre-line">{{ bounty.description }}</p>
 
@@ -217,8 +223,9 @@ async function pollPayout() {
 
       <div v-else class="mt-2 flex flex-col gap-2.5">
         <article
-          v-for="entry in bounty.submissions"
+          v-for="(entry, index) in bounty.submissions"
           :key="entry.id"
+          v-reveal="index"
           class="card px-4 py-4"
           :class="entry.status === 'winner' ? 'ring-1 ring-success/30' : ''"
         >
@@ -272,7 +279,7 @@ async function pollPayout() {
 
       <button
         v-else-if="!showSubmit"
-        class="min-h-[52px] w-full rounded-xl bg-brand text-sm font-bold text-white"
+        class="pressable min-h-[52px] w-full rounded-xl bg-brand text-sm font-bold text-white"
         @click="showSubmit = true"
       >
         Submit your solution
@@ -305,7 +312,7 @@ async function pollPayout() {
             Cancel
           </button>
           <button
-            class="min-h-[52px] flex-1 rounded-xl bg-brand text-[13px] font-bold text-white disabled:opacity-40"
+            class="pressable min-h-[52px] flex-1 rounded-xl bg-brand text-[13px] font-bold text-white disabled:opacity-40"
             :disabled="submitting || connecting || submission.content.trim().length < 3 || !isInsideNimiqPay"
             @click="submitWork"
           >
@@ -326,12 +333,13 @@ async function pollPayout() {
     </p>
 
     <!-- Payout confirmation -->
-    <div
-      v-if="confirming"
-      class="fixed inset-0 z-50 flex items-end bg-black/40 p-3"
-      @click.self="!paying && (confirming = null)"
-    >
-      <div class="mx-auto w-full max-w-lg rounded-2xl bg-surface px-5 py-6">
+    <Transition name="sheet">
+      <div
+        v-if="confirming"
+        class="fixed inset-0 z-50 flex items-end bg-black/40 p-3"
+        @click.self="!paying && (confirming = null)"
+      >
+        <div class="sheet-panel mx-auto w-full max-w-lg rounded-2xl bg-surface px-5 py-6">
         <h3 class="text-[17px] font-bold">Release the reward?</h3>
         <p class="mt-2 text-[14px] leading-relaxed text-muted">
           Escrow will send
@@ -342,31 +350,40 @@ async function pollPayout() {
           This cannot be undone. A bounty can only ever pay out once.
         </p>
 
-        <p v-if="payError" class="mt-3 rounded-xl bg-[#fdeaea] px-3 py-2.5 text-[13px] leading-relaxed text-[#c0392b]">
-          {{ payError }}
-        </p>
-        <p v-if="payStage" class="mt-3 flex items-center gap-2 rounded-xl bg-brand-soft px-3 py-2.5 text-[13px] font-medium text-brand">
-          <span class="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          {{ payStage }}
-        </p>
+        <Transition name="expand">
+          <div v-if="payStage !== 'idle'" class="mt-4 rounded-xl bg-canvas px-4 py-3.5">
+            <TxProgress
+              :stage="payStage"
+              :error="payError || null"
+              :labels="{
+                preparing: 'Recording your choice',
+                wallet: 'Releasing NIM from escrow',
+                submitted: 'Payout broadcast',
+                verifying: 'Verifying on the Nimiq testnet',
+                confirmed: 'Reward distributed',
+              }"
+            />
+          </div>
+        </Transition>
 
         <div class="mt-4 flex gap-2.5">
           <button
-            class="min-h-[52px] flex-1 rounded-xl bg-canvas text-[13px] font-semibold text-muted disabled:opacity-40"
+            class="pressable min-h-[52px] flex-1 rounded-xl bg-canvas text-[13px] font-semibold text-muted disabled:opacity-40"
             :disabled="paying"
             @click="confirming = null"
           >
-            Cancel
+            {{ payStage === 'failed' ? 'Close' : 'Cancel' }}
           </button>
           <button
-            class="min-h-[52px] flex-1 rounded-xl bg-brand text-[13px] font-bold text-white disabled:opacity-40"
+            class="pressable min-h-[52px] flex-1 rounded-xl bg-brand text-[13px] font-bold text-white disabled:opacity-40"
             :disabled="paying"
             @click="confirmWinner"
           >
-            {{ paying ? 'Paying…' : 'Confirm payout' }}
+            {{ paying ? 'Paying…' : payStage === 'failed' ? 'Try again' : 'Confirm payout' }}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>

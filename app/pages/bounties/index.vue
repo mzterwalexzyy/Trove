@@ -108,7 +108,12 @@ const sorts = [
     </div>
 
     <div v-else class="card mt-4 divide-y divide-line overflow-hidden">
-      <BountyCard v-for="bounty in bounties" :key="bounty.id" :bounty="bounty" />
+      <BountyCard
+        v-for="(bounty, index) in bounties"
+        :key="bounty.id"
+        v-reveal="index"
+        :bounty="bounty"
+      />
     </div>
   </div>
 </template>

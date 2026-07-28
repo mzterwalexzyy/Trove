@@ -67,14 +67,16 @@ const steps = [
       </div>
     </section>
 
-    <section class="card mx-4 mt-4 grid grid-cols-4 gap-1 px-2 py-4">
+    <section v-reveal="0" class="card mx-4 mt-4 grid grid-cols-4 gap-1 px-2 py-4">
       <div v-for="item in [
         { value: stats.activeBounties, label: 'Active' },
         { value: stats.completed, label: 'Completed' },
-        { value: formatNim(stats.paidOutNim), label: 'NIM paid' },
+        { value: stats.paidOutNim, label: 'NIM paid' },
         { value: stats.hunters, label: 'Hunters' },
       ]" :key="item.label" class="text-center">
-        <p class="text-lg font-bold tabular-nums">{{ item.value }}</p>
+        <p class="text-lg font-bold">
+          <AnimatedNumber :value="item.value" />
+        </p>
         <p class="mt-0.5 text-[11px] text-muted">{{ item.label }}</p>
       </div>
     </section>
@@ -94,14 +96,19 @@ const steps = [
       </p>
 
       <div v-else class="divide-y divide-line">
-        <BountyCard v-for="bounty in featured" :key="bounty.id" :bounty="bounty" />
+        <BountyCard
+          v-for="(bounty, index) in featured"
+          :key="bounty.id"
+          v-reveal="index"
+          :bounty="bounty"
+        />
       </div>
     </section>
 
-    <section class="card mx-4 mt-4 px-5 py-5">
+    <section v-reveal="0" class="card mx-4 mt-4 px-5 py-5">
       <h2 class="text-[15px] font-bold">How it works</h2>
       <ol class="mt-4 grid grid-cols-2 gap-4">
-        <li v-for="(item, index) in steps" :key="item.title" class="text-center">
+        <li v-for="(item, index) in steps" :key="item.title" v-reveal="index" class="text-center">
           <span class="relative mx-auto flex size-14 items-center justify-center rounded-2xl bg-brand-soft">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-6 text-brand">
               <path :d="item.icon" stroke-linecap="round" stroke-linejoin="round" />

@@ -40,8 +40,134 @@ body {
   box-shadow: 0 1px 2px rgb(26 26 46 / 4%), 0 8px 24px -12px rgb(26 26 46 / 12%);
 }
 
+/* ---------------------------------------------------------------------------
+   Motion
+   Everything below animates transform and opacity only, so it stays on the
+   compositor and holds 60fps on low-end Android inside the Nimiq Pay WebView.
+   Every animation answers one question: did something happen, is it loading,
+   did it succeed, did the state change, or can I interact with it.
+   --------------------------------------------------------------------------- */
+
 @keyframes shimmer {
   100% { transform: translateX(100%); }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.86); opacity: 0; }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  70% { transform: scale(1.5); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Scroll reveal. Elements start hidden and are released by the v-reveal
+   directive, which sets --reveal-delay for a stagger.
+
+   Deliberately a transition rather than a keyframe animation. A keyframe with
+   animation-fill-mode holds the `from` state whenever the animation engine is
+   not advancing (throttled WebView, backgrounded tab), which would leave
+   content invisible for good. A transition that never runs simply lands on the
+   final state, so the worst case is no animation rather than no content. */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+}
+
+.reveal-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.42s ease var(--reveal-delay, 0ms),
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+}
+
+.pop-in {
+  animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Press feedback. Touch devices get no hover, so the press state carries it. */
+.pressable {
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.pressable:active {
+  transform: scale(0.978);
+}
+
+@media (hover: hover) {
+  .pressable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgb(26 26 46 / 5%), 0 16px 32px -16px rgb(26 26 46 / 22%);
+  }
+}
+
+/* Page transitions */
+.page-enter-active { transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.page-leave-active { transition: opacity 0.12s ease; }
+.page-enter-from { opacity: 0; transform: translate3d(0, 8px, 0); }
+.page-leave-to { opacity: 0; }
+
+/* Bottom sheet on mobile, gentle scale on larger screens */
+.sheet-enter-active,
+.sheet-leave-active { transition: opacity 0.22s ease; }
+.sheet-enter-from,
+.sheet-leave-to { opacity: 0; }
+
+.sheet-enter-active .sheet-panel,
+.sheet-leave-active .sheet-panel { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.sheet-enter-from .sheet-panel,
+.sheet-leave-to .sheet-panel { transform: translate3d(0, 100%, 0); }
+
+@media (min-width: 640px) {
+  .sheet-enter-from .sheet-panel,
+  .sheet-leave-to .sheet-panel { transform: scale(0.96); }
+}
+
+/* Toasts */
+.toast-enter-active { transition: opacity 0.24s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+.toast-leave-active { transition: opacity 0.18s ease, transform 0.18s ease; position: absolute; }
+.toast-enter-from { opacity: 0; transform: translate3d(0, -14px, 0); }
+.toast-leave-to { opacity: 0; transform: translate3d(0, -8px, 0); }
+
+/* Height-collapsing detail sections */
+.expand-enter-active,
+.expand-leave-active { transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.expand-enter-from,
+.expand-leave-to { opacity: 0; transform: translate3d(0, -6px, 0); }
+
+/* One honest exception to the transform/opacity rule: the verified checkmark
+   draws itself, which needs stroke-dashoffset. It runs once, on one small SVG. */
+.check-draw path {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  animation: draw 0.42s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .reveal { opacity: 1; }
+  .pressable:hover { transform: none; }
 }
 
 .skeleton {

@@ -24,7 +24,7 @@ defineEmits<{ connect: [] }>()
     </p>
 
     <button
-      class="mt-4 min-h-[52px] w-full rounded-xl bg-brand text-sm font-semibold text-white disabled:opacity-40"
+      class="pressable mt-4 min-h-[52px] w-full rounded-xl bg-brand text-sm font-semibold text-white disabled:opacity-40"
       :disabled="connecting || !available"
       @click="$emit('connect')"
     >

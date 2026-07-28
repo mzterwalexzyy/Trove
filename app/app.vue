@@ -5,7 +5,7 @@ useHead({
   titleTemplate: title => title ? `${title} · Nimiq Bounty` : 'Nimiq Bounty',
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-    { name: 'theme-color', content: '#0b1020' },
+    { name: 'theme-color', content: '#f7f7fb' },
   ],
 })
 
@@ -20,8 +20,9 @@ onMounted(() => {
 <template>
   <div>
     <NuxtRouteAnnouncer />
+    <ToastHost />
     <NuxtLayout>
-      <NuxtPage />
+      <NuxtPage :transition="{ name: 'page', mode: 'out-in' }" />
     </NuxtLayout>
   </div>
 </template>

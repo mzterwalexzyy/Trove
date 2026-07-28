@@ -13,7 +13,9 @@ const form = reactive({
   days: 7,
 })
 
-type Stage = 'idle' | 'creating' | 'awaiting_wallet' | 'verifying' | 'error'
+const toast = useToast()
+
+type Stage = 'idle' | 'creating' | 'awaiting_wallet' | 'verifying' | 'confirmed' | 'error'
 const stage = ref<Stage>('idle')
 const problem = ref('')
 const created = ref<{ id: string, memo: string, escrowAddress: string, rewardLuna: number } | null>(null)
@@ -30,11 +32,15 @@ const stepValid = computed(() => {
 
 const busy = computed(() => ['creating', 'awaiting_wallet', 'verifying'].includes(stage.value))
 
-const stageLabel = computed(() => ({
-  creating: 'Saving your bounty…',
-  awaiting_wallet: 'Confirm the transfer in your wallet…',
-  verifying: 'Confirming on the Nimiq testnet…',
-}[stage.value as string] ?? ''))
+/** Maps this flow's internal stages onto the shared transaction timeline. */
+const txStage = computed<TxStage>(() => {
+  if (stage.value === 'creating') return 'preparing'
+  if (stage.value === 'awaiting_wallet') return 'wallet'
+  if (stage.value === 'verifying') return txHash.value ? 'verifying' : 'submitted'
+  if (stage.value === 'confirmed') return 'confirmed'
+  if (stage.value === 'error') return 'failed'
+  return 'idle'
+})
 
 async function copy(text: string, key: string) {
   try {
@@ -100,6 +106,10 @@ async function confirmFunding() {
       timeout: 20_000,
     })
     if (result.status === 'verified' || result.status === 'already_funded') {
+      stage.value = 'confirmed'
+      toast.success('Reward secured. Your bounty is live.')
+      // Let the final tick land before navigating away.
+      await new Promise(resolve => setTimeout(resolve, 650))
       return navigateTo(`/bounties/${created.value!.id}?funded=1`)
     }
     await new Promise(resolve => setTimeout(resolve, 5000))
@@ -271,14 +281,21 @@ async function confirmFunding() {
         the winner, and nothing is released until you confirm.
       </p>
 
-      <p v-if="problem" class="rounded-xl bg-[#fdeaea] px-4 py-3 text-[13px] leading-relaxed text-[#c0392b]">
-        {{ problem }}
-      </p>
-
-      <p v-if="busy" class="flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-3 text-[13px] font-medium text-brand">
-        <span class="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        {{ stageLabel }}
-      </p>
+      <Transition name="expand">
+        <div v-if="txStage !== 'idle'" class="card px-4 py-4">
+          <TxProgress
+            :stage="txStage"
+            :error="problem || null"
+            :labels="{
+              preparing: 'Saving your bounty',
+              wallet: 'Confirm the transfer in your wallet',
+              submitted: 'Transfer submitted',
+              verifying: 'Verifying on the Nimiq testnet',
+              confirmed: 'Reward secured',
+            }"
+          />
+        </div>
+      </Transition>
 
       <p v-if="!isInsideNimiqPay" class="rounded-xl bg-[#fdf6e8] px-4 py-3 text-[12px] leading-relaxed text-[#8a5d05]">
         Open this Mini App inside Nimiq Pay to fund the bounty from your wallet.
@@ -296,7 +313,7 @@ async function confirmFunding() {
       </button>
       <button
         v-if="step < 4"
-        class="min-h-[52px] flex-1 rounded-xl bg-brand text-sm font-semibold text-white disabled:opacity-40"
+        class="pressable min-h-[52px] flex-1 rounded-xl bg-brand text-sm font-semibold text-white disabled:opacity-40"
         :disabled="!stepValid"
         @click="step++"
       >
@@ -304,7 +321,7 @@ async function confirmFunding() {
       </button>
       <button
         v-else
-        class="min-h-[52px] flex-1 rounded-xl bg-brand text-sm font-bold text-white disabled:opacity-40"
+        class="pressable min-h-[52px] flex-1 rounded-xl bg-brand text-sm font-bold text-white disabled:opacity-40"
         :disabled="busy || connecting || !isInsideNimiqPay"
         @click="publish"
       >

@@ -19,7 +19,10 @@ const urgent = computed(() => props.bounty.deadlineAt - Date.now() / 1000 < 8640
 </script>
 
 <template>
-  <NuxtLink :to="`/bounties/${bounty.id}`" class="flex items-start gap-3.5 px-4 py-4">
+  <NuxtLink
+    :to="`/bounties/${bounty.id}`"
+    class="pressable flex items-start gap-3.5 rounded-2xl px-4 py-4"
+  >
     <span
       class="flex size-11 shrink-0 items-center justify-center rounded-xl"
       :class="meta.tint"
