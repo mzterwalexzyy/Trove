@@ -141,7 +141,7 @@ async function confirmWinner() {
   }
   catch (err: any) {
     payStage.value = 'failed'
-    payError.value = err?.statusMessage ?? describeError(err)
+    payError.value = describeError(err)
   }
   finally {
     paying.value = false

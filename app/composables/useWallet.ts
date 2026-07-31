@@ -14,6 +14,13 @@ export function unwrap<T>(result: T | SdkError): T {
 
 /** Turns provider and network failures into something a person can act on. */
 export function describeError(err: unknown): string {
+  // A failed $fetch carries the server's own explanation on `err.data`, not on
+  // `err.message` (which is just "[POST] ...: 409 Conflict"). Prefer it, so a
+  // reason like "this bounty is still open for entries" actually reaches the
+  // creator instead of a bare status code.
+  const serverMessage = (err as any)?.data?.statusMessage ?? (err as any)?.data?.message
+  if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage
+
   const raw = err instanceof Error ? err.message : String(err)
   if (/reject|denied|cancel/i.test(raw)) return 'Cancelled in your wallet'
   if (/insufficient|balance|funds/i.test(raw)) return 'Not enough NIM in your wallet'

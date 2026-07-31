@@ -10,7 +10,8 @@ const form = reactive({
   requirements: '',
   category: 'coding',
   rewardNim: 50,
-  days: 7,
+  durationValue: 7,
+  durationUnit: 'days' as 'hours' | 'days',
 })
 
 const toast = useToast()
@@ -29,7 +30,8 @@ function applyDraft(draft: {
   form.requirements = draft.requirements
   form.category = draft.category
   form.rewardNim = draft.suggestedRewardNim
-  form.days = draft.suggestedDays
+  form.durationValue = draft.suggestedDays
+  form.durationUnit = 'days'
 }
 
 /**
@@ -57,11 +59,18 @@ const created = ref<{ id: string, memo: string, escrowAddress: string, rewardLun
 const txHash = ref('')
 const copied = ref('')
 
-const deadlineAt = computed(() => Math.floor(Date.now() / 1000) + form.days * 86400)
+/** Seconds the bounty stays open. Hours let a creator run a sub-day sprint;
+ *  days cover the common case. Clamped to a sane floor so a stray 0 cannot
+ *  create a bounty that is already closed the instant it is funded. */
+const durationSeconds = computed(() => {
+  const unit = form.durationUnit === 'hours' ? 3600 : 86400
+  return Math.max(1, Math.floor(form.durationValue)) * unit
+})
+const deadlineAt = computed(() => Math.floor(Date.now() / 1000) + durationSeconds.value)
 
 const stepValid = computed(() => {
   if (step.value === 1) return form.title.trim().length > 2 && form.description.trim().length > 9
-  if (step.value === 3) return form.rewardNim >= 1 && form.days >= 1
+  if (step.value === 3) return form.rewardNim >= 1 && form.durationValue >= 1
   return true
 })
 
@@ -251,16 +260,48 @@ async function confirmFunding() {
       <div class="flex flex-col gap-1.5">
         <span class="text-[13px] font-semibold">Open for</span>
         <div class="flex gap-2">
+          <div class="relative flex-1">
+            <input
+              v-model.number="form.durationValue"
+              type="number"
+              min="1"
+              inputmode="numeric"
+              class="min-h-[52px] w-full rounded-xl border border-line bg-canvas px-4 text-lg font-bold tabular-nums outline-none focus:border-brand"
+            >
+          </div>
+          <div class="flex rounded-xl bg-canvas p-1">
+            <button
+              v-for="unit in (['hours', 'days'] as const)"
+              :key="unit"
+              class="min-h-[44px] rounded-lg px-4 text-[13px] font-semibold capitalize"
+              :class="form.durationUnit === unit ? 'bg-brand text-white' : 'text-muted'"
+              @click="form.durationUnit = unit"
+            >
+              {{ unit }}
+            </button>
+          </div>
+        </div>
+        <div class="mt-1 flex flex-wrap gap-2">
           <button
-            v-for="option in [3, 7, 14, 30]"
-            :key="option"
-            class="min-h-[48px] flex-1 rounded-xl text-sm font-semibold"
-            :class="form.days === option ? 'bg-brand text-white' : 'bg-canvas text-muted'"
-            @click="form.days = option"
+            v-for="preset in [
+              { label: '12h', value: 12, unit: 'hours' as const },
+              { label: '3d', value: 3, unit: 'days' as const },
+              { label: '7d', value: 7, unit: 'days' as const },
+              { label: '14d', value: 14, unit: 'days' as const },
+              { label: '30d', value: 30, unit: 'days' as const },
+            ]"
+            :key="preset.label"
+            class="min-h-[40px] rounded-lg px-3.5 text-[13px] font-semibold"
+            :class="form.durationValue === preset.value && form.durationUnit === preset.unit
+              ? 'bg-brand-soft text-brand' : 'bg-canvas text-muted'"
+            @click="form.durationValue = preset.value; form.durationUnit = preset.unit"
           >
-            {{ option }}d
+            {{ preset.label }}
           </button>
         </div>
+        <span class="text-[12px] leading-relaxed text-muted">
+          Entries close after this. You can select a winner once it closes.
+        </span>
       </div>
     </div>
 
