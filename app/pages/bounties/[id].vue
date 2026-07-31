@@ -61,10 +61,17 @@ const shareLink = computed(() => {
   return url.toString()
 })
 
-const shareText = computed(() =>
-  bounty.value
-    ? `There is a ${formatNim(bounty.value.rewardNim)} NIM bounty for this. Think you can solve it?`
-    : '')
+/** The message carries the title, reward, and enough of the description to say
+ *  what the task actually is. Trimmed so X's 280-char limit still leaves room
+ *  for the link; the other apps have no limit but read better short too. */
+const shareText = computed(() => {
+  const b = bounty.value
+  if (!b) return ''
+  const gist = (b.description ?? '').replace(/\s+/g, ' ').trim()
+  const clipped = gist.length > 160 ? `${gist.slice(0, 159).trimEnd()}…` : gist
+  const lead = `${b.title} — ${formatNim(b.rewardNim)} NIM bounty on Trove.`
+  return clipped ? `${lead}\n\n${clipped}\n\nThink you can solve it?` : `${lead} Think you can solve it?`
+})
 
 /** Prebuilt targets per app. `scheme` is the native app deep link, which an
  *  in-app webview hands off to the OS so the real app opens; `web` is the
