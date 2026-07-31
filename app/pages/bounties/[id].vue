@@ -27,6 +27,56 @@ const checklist = computed(() => {
   ]
 })
 
+// Referral. `?ref=` carries the referrer; the offer only shows to someone who
+// is not the creator, has not already accepted one, and is not the referrer.
+const { address } = useWallet()
+const refParam = computed(() => {
+  const value = route.query.ref
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+})
+
+const showReferralOffer = computed(() => {
+  const b = bounty.value
+  if (!b || !refParam.value) return false
+  if (b.isCreator) return false
+  if (b.referral?.mine) return false
+  if (address.value && normalise(address.value) === normalise(refParam.value)) return false
+  return b.status === 'active'
+})
+
+function normalise(value: string) {
+  return value.replace(/\s+/g, '').toUpperCase()
+}
+
+/** Share this bounty, attributing the referral to the sharer. */
+const sharing = ref(false)
+async function shareBounty() {
+  if (sharing.value) return
+  sharing.value = true
+  try {
+    const url = new URL(window.location.href)
+    url.search = ''
+    if (address.value) url.searchParams.set('ref', address.value.replace(/\s+/g, ''))
+    const link = url.toString()
+    const text = `There is a ${formatNim(bounty.value.rewardNim)} NIM bounty for this. Think you can solve it?`
+
+    if (navigator.share) {
+      await navigator.share({ title: bounty.value.title, text, url: link })
+    }
+    else {
+      await navigator.clipboard.writeText(link)
+      toast.success('Link copied')
+    }
+  }
+  catch (err: any) {
+    // A user dismissing the share sheet is a normal action, not a failure.
+    if (err?.name !== 'AbortError') toast.error('Could not share this bounty')
+  }
+  finally {
+    sharing.value = false
+  }
+}
+
 // Submitting
 const submission = reactive({ content: '', link: '' })
 const submitting = ref(false)
@@ -157,6 +207,39 @@ async function pollPayout() {
       />
     </div>
 
+    <ReferralCard
+      v-if="showReferralOffer"
+      :bounty-id="id"
+      :referrer="refParam!"
+      :percent="bounty.referral.percent"
+      :winner-nim="bounty.referral.winnerNim"
+      :referrer-nim="bounty.referral.referrerNim"
+      :reward-nim="bounty.rewardNim"
+      @accepted="refresh()"
+    />
+
+    <!-- Already referred: keep the net figure visible so the headline reward
+         on the card is never the last word this hunter saw. -->
+    <p
+      v-else-if="bounty.referral?.mine"
+      class="mt-3 rounded-xl bg-brand-soft px-4 py-3 text-[12px] leading-relaxed text-brand-ink"
+    >
+      Referred by {{ shortAddress(bounty.referral.mine.referrerAddress) }}. If you win you receive
+      {{ formatNim(bounty.referral.winnerNim) }} NIM and they receive
+      {{ formatNim(bounty.referral.referrerNim) }} NIM.
+    </p>
+
+    <button
+      class="pressable mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface text-[13px] font-semibold text-ink"
+      :disabled="sharing"
+      @click="shareBounty"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+        <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3m0 0L8 7m4-4 4 4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      Share and earn {{ bounty.referral.percent }}%
+    </button>
+
     <!-- Completed -->
     <section v-if="bounty.payout?.status === 'verified'" class="card pop-in mt-3 px-5 py-6 text-center">
       <span class="mx-auto flex size-16 items-center justify-center rounded-full bg-success-soft">
@@ -192,7 +275,7 @@ async function pollPayout() {
         <li v-for="(item, index) in checklist" :key="item.label" v-reveal="index" class="flex items-center gap-2.5 text-[13px]">
           <span
             class="flex size-5 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
-            :class="item.done ? 'bg-success text-white' : 'bg-[#e6e4ee] text-transparent'"
+            :class="item.done ? 'bg-success text-white' : 'bg-track text-transparent'"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" class="size-2.5">
               <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
@@ -300,7 +383,7 @@ async function pollPayout() {
           placeholder="Link to your work (optional)"
           class="min-h-[48px] rounded-xl border border-line bg-canvas px-4 text-sm outline-none focus:border-brand"
         >
-        <p v-if="submitError" class="rounded-xl bg-[#fdeaea] px-3 py-2.5 text-[13px] text-[#c0392b]">
+        <p v-if="submitError" class="rounded-xl bg-danger-soft px-3 py-2.5 text-[13px] text-danger">
           {{ submitError }}
         </p>
         <div class="flex gap-2.5">
@@ -319,7 +402,7 @@ async function pollPayout() {
             {{ submitting ? 'Submitting…' : 'Submit' }}
           </button>
         </div>
-        <p v-if="!isInsideNimiqPay" class="text-[12px] text-[#8a5d05]">
+        <p v-if="!isInsideNimiqPay" class="text-[12px] text-warn">
           Open in Nimiq Pay to submit and get paid.
         </p>
       </div>
@@ -346,7 +429,7 @@ async function pollPayout() {
           <span class="font-bold text-ink">{{ formatNim(payAmount) }} NIM</span>
           to <span class="font-mono text-ink">{{ shortAddress(confirming.address) }}</span>.
         </p>
-        <p class="mt-2 rounded-xl bg-[#fdf6e8] px-3 py-2.5 text-[12px] leading-relaxed text-[#8a5d05]">
+        <p class="mt-2 rounded-xl bg-warn-soft px-3 py-2.5 text-[12px] leading-relaxed text-warn">
           This cannot be undone. A bounty can only ever pay out once.
         </p>
 

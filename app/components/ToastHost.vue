@@ -3,7 +3,7 @@ const { toasts, dismiss } = useToast()
 
 const tones = {
   success: 'bg-success text-white',
-  error: 'bg-[#d34a41] text-white',
+  error: 'bg-danger text-white',
   info: 'bg-ink text-white',
 }
 

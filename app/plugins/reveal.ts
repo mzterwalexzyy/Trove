@@ -13,8 +13,8 @@
  * timeout that releases it regardless of what else happens, and the hidden
  * state is only applied once we know the release path is armed.
  */
-const STAGGER_MS = 55
-const MAX_STAGGER_MS = 330
+const STAGGER_MS = 90
+const MAX_STAGGER_MS = 540
 const FAILSAFE_MS = 1200
 
 export default defineNuxtPlugin((nuxtApp) => {

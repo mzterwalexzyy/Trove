@@ -10,8 +10,8 @@ async function signIn() {
 
 const statusMeta: Record<string, { label: string, tint: string }> = {
   winner: { label: 'Won', tint: 'bg-success-soft text-success' },
-  not_selected: { label: 'Not selected', tint: 'bg-[#eeeef4] text-muted' },
-  submitted: { label: 'Under review', tint: 'bg-[#fef3e0] text-[#b8860b]' },
+  not_selected: { label: 'Not selected', tint: 'bg-track text-muted' },
+  submitted: { label: 'Under review', tint: 'bg-warn-soft text-warn' },
 }
 </script>
 
@@ -59,7 +59,7 @@ const statusMeta: Record<string, { label: string, tint: string }> = {
           </div>
           <span
             class="mt-2 inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold"
-            :class="statusMeta[item.submissionStatus]?.tint ?? 'bg-[#eeeef4] text-muted'"
+            :class="statusMeta[item.submissionStatus]?.tint ?? 'bg-track text-muted'"
           >
             {{ statusMeta[item.submissionStatus]?.label ?? item.submissionStatus }}
           </span>

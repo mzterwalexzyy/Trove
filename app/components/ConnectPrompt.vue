@@ -19,7 +19,7 @@ defineEmits<{ connect: [] }>()
     <p class="mt-3 text-[15px] font-semibold">Connect your wallet</p>
     <p class="mt-1 text-[13px] leading-relaxed text-muted">{{ message }}</p>
 
-    <p v-if="error" class="mt-3 rounded-xl bg-[#fdeaea] px-3 py-2.5 text-[13px] text-[#c0392b]">
+    <p v-if="error" class="mt-3 rounded-xl bg-danger-soft px-3 py-2.5 text-[13px] text-danger">
       {{ error }}
     </p>
 

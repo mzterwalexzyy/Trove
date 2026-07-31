@@ -76,7 +76,7 @@ export const transactions = sqliteTable('transactions', {
   id: text('id').primaryKey(),
   txHash: text('tx_hash').notNull(),
   bountyId: text('bounty_id').references(() => bounties.id),
-  type: text('type').notNull(), // 'fund' | 'payout'
+  type: text('type').notNull(), // 'fund' | 'payout' | 'referral'
   fromAddress: text('from_address').notNull(),
   toAddress: text('to_address').notNull(),
   valueLuna: integer('value_luna').notNull(),
@@ -110,6 +110,46 @@ export const payouts = sqliteTable('payouts', {
 }, table => [
   // Profile page: "bounties I won".
   index('payouts_winner_idx').on(table.winnerAddress),
+])
+
+/**
+ * Records who referred a hunter to a bounty. The referrer earns a cut only if
+ * the hunter they referred actually wins.
+ *
+ * The (bounty, hunter) pair is unique, so the first referrer recorded wins and
+ * can never be overwritten by a later attribution. All the anti-abuse rules
+ * (no self-referral, the creator is excluded, it must predate the submission)
+ * are enforced server-side in `recordReferral`, never in the UI.
+ */
+export const referrals = sqliteTable('referrals', {
+  id: text('id').primaryKey(),
+  bountyId: text('bounty_id').notNull().references(() => bounties.id),
+  hunterAddress: text('hunter_address').notNull(),
+  referrerAddress: text('referrer_address').notNull(),
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+}, table => [
+  uniqueIndex('referrals_unique_hunter').on(table.bountyId, table.hunterAddress),
+  index('referrals_referrer_idx').on(table.referrerAddress),
+])
+
+/**
+ * The referral leg of a payout. Keyed by bounty id exactly like `payouts`, so
+ * at most one referral payment can ever exist per bounty. The row is claimed
+ * before any NIM moves; a concurrent call collides on the primary key and
+ * aborts. A bounty is only `completed` once both this leg and the winner leg
+ * are confirmed on chain.
+ */
+export const referralPayouts = sqliteTable('referral_payouts', {
+  bountyId: text('bounty_id').primaryKey().references(() => bounties.id),
+  referrerAddress: text('referrer_address').notNull(),
+  amountLuna: integer('amount_luna').notNull(),
+  status: text('status').notNull().default('claimed'), // claimed | broadcast | verified | failed
+  txHash: text('tx_hash'),
+  claimedAt: integer('claimed_at').notNull().default(sql`(unixepoch())`),
+  verifiedAt: integer('verified_at'),
+  failureReason: text('failure_reason'),
+}, table => [
+  index('referral_payouts_referrer_idx').on(table.referrerAddress),
 ])
 
 /** Append-only audit trail. Every escrow movement lands here, success or not. */

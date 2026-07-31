@@ -12,7 +12,13 @@ const props = withDefaults(defineProps<{
   decimals?: number
 }>(), { duration: 750, decimals: 0 })
 
-const shown = ref(0)
+/**
+ * Starts at the real value rather than 0 so the server renders the actual
+ * number. Rendering 0 on the server and the value on the client was a
+ * hydration mismatch, and it also meant the figure was simply wrong without
+ * JavaScript. The count-up is restarted from 0 on mount instead.
+ */
+const shown = ref(props.value)
 let frame = 0
 
 function run(to: number) {
@@ -38,7 +44,11 @@ function run(to: number) {
   frame = requestAnimationFrame(step)
 }
 
-onMounted(() => run(props.value))
+onMounted(() => {
+  // Rewind to 0 only once hydration has matched, then count up.
+  shown.value = 0
+  run(props.value)
+})
 watch(() => props.value, to => run(to))
 onBeforeUnmount(() => cancelAnimationFrame(frame))
 

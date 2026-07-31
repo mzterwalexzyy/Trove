@@ -27,3 +27,19 @@ logs
 .output/
 dev.log
 prod.log
+
+# Internal working notes, not for the public repo
+HANDOFF.md
+
+# Source art and generated logo working files
+new_logo.jpg
+nimiq.png
+dev.log
+.data/
+
+# logo working files
+new_logo.png
+1000151537-removebg-preview.png
+
+lightmode.png
+darkmode.png

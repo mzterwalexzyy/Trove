@@ -24,7 +24,10 @@ async function signIn() {
       @connect="signIn"
     />
 
-    <template v-else-if="me">
+    <!-- `me.stats` is absent until the session is recognised. Testing `me`
+         alone rendered this branch against a bare `{ address: null }` payload
+         and threw on `stats.earnedNim`. -->
+    <template v-else-if="me?.stats">
       <div class="card mt-4 flex items-center gap-3 px-4 py-4">
         <span class="flex size-11 items-center justify-center rounded-full bg-brand-soft">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5 text-brand">
@@ -56,7 +59,7 @@ async function signIn() {
         </div>
       </div>
 
-      <div class="mt-4 flex gap-1 rounded-xl bg-[#eceaf4] p-1">
+      <div class="mt-4 flex gap-1 rounded-xl bg-track p-1">
         <button
           v-for="option in [
             { key: 'created', label: `Created (${me.created.length})` },
@@ -88,7 +91,7 @@ async function signIn() {
             </div>
             <span
               class="mt-2 inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold"
-              :class="item.verified ? 'bg-success-soft text-success' : 'bg-[#fdf6e8] text-[#8a5d05]'"
+              :class="item.verified ? 'bg-success-soft text-success' : 'bg-warn-soft text-warn'"
             >
               {{ item.verified ? 'Funded and verified' : 'Awaiting funding' }}
             </span>
@@ -121,5 +124,11 @@ async function signIn() {
         </div>
       </div>
     </template>
+
+    <!-- Outside the wallet gate on purpose: changing the theme should not
+         require connecting a wallet. -->
+    <div class="mt-4">
+      <ThemeSwitch />
+    </div>
   </div>
 </template>

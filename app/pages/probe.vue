@@ -253,7 +253,7 @@ const passed = computed(() => checks.filter(c => c.status === 'pass').length)
   <main class="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-5 py-8">
     <header>
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">
-        Nimiq Bounty
+        Trove
       </p>
       <h1 class="mt-1 text-2xl font-bold">
         Phase 1 verification

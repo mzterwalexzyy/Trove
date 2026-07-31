@@ -1,32 +1,144 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-canvas: #f7f7fb;
-  --color-surface: #ffffff;
-  --color-line: #ecebf3;
-  --color-ink: #1a1a2e;
-  --color-muted: #6b6b85;
-  --color-brand: #5546e8;
-  --color-brand-dark: #4436d4;
-  --color-brand-soft: #eeecfe;
-  --color-gold: #f5a623;
-  --color-success: #17a673;
-  --color-success-soft: #e4f7f0;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-soft: var(--brand-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  /* Landing page bands */
+  --color-band: var(--band);
+  --color-deep: var(--deep);
+  --color-deep-2: var(--deep-2);
+  --color-brand-lift: var(--brand-lift);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-track: var(--track);
+  --color-brand-ink: var(--brand-ink);
+  --color-hero-from: var(--hero-from);
+  --color-hero-to: var(--hero-to);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/*
+ * One set of semantic tokens, two palettes. Components only ever reference the
+ * semantic name, so dark mode is a change of values rather than a second
+ * design. Dark avoids pure black and pure white: #0d0f1f reads as deep navy
+ * rather than a void, and #e9e9f2 body text prevents the halation you get from
+ * #fff on a dark ground.
+ */
 :root {
   color-scheme: light;
+
+  --canvas: #f7f7fb;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --line: #ecebf3;
+  --ink: #1a1a2e;
+  --muted: #6b6b85;
+  --brand: #5546e8;
+  --brand-dark: #4436d4;
+  --brand-soft: #eeecfe;
+  --gold: #f5a623;
+  --gold-soft: #fdf1dc;
+  --success: #17a673;
+  --success-soft: #e4f7f0;
+  --danger: #d34a41;
+  --danger-soft: #fdeaea;
+  /* Amber text on a light ground needs to be this dark to stay readable. */
+  --warn: #8a5d05;
+  --warn-soft: #fdf6e8;
+  /* Inert track behind progress dots, tabs and segmented controls. */
+  --track: #e6e4ee;
+  --brand-ink: #3d3193;
+  --hero-from: #efedff;
+  --hero-to: #e6f0ff;
+
+  --shadow-card: 0 1px 2px rgb(26 26 46 / 4%), 0 8px 24px -12px rgb(26 26 46 / 12%);
+  --shadow-lift: 0 2px 4px rgb(26 26 46 / 5%), 0 16px 32px -16px rgb(26 26 46 / 22%);
+  /* Alternating band, one step off canvas. Enough to separate sections
+     without reading as a different page. */
+  --band: #f1f0f7;
+  --deep: #141733;
+  --deep-2: #0f1128;
+  --brand-lift: #9d92ff;
+
+  --skeleton-base: #eceaf4;
+  --skeleton-sheen: rgb(255 255 255 / 70%);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #0d0f1f;
+  --surface: #161930;
+  --raised: #1e2240;
+  --line: #262a48;
+  --ink: #e9e9f2;
+  --muted: #9a9ab8;
+  /* Lifted off the light-mode indigo so it keeps contrast on a dark ground. */
+  --brand: #7b6df2;
+  --brand-dark: #6a5bea;
+  --brand-soft: #24224a;
+  --gold: #f0b04d;
+  --gold-soft: #33280f;
+  --success: #2fbe8b;
+  --success-soft: #102e26;
+  --danger: #e8635a;
+  --danger-soft: #33191a;
+  /* On a dark ground the amber can stay bright; it is the soft fill that has
+     to go dark instead. */
+  --warn: #e0a94a;
+  --warn-soft: #302511;
+  --track: #2b2f52;
+  --brand-ink: #b3a9ff;
+  --hero-from: #1d1f43;
+  --hero-to: #16223d;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px -12px rgb(0 0 0 / 55%);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 35%), 0 16px 32px -16px rgb(0 0 0 / 65%);
+  /* On a dark page the band lifts instead of dropping, and the closing band
+     drops below canvas so it still separates. */
+  --band: #12152a;
+  --deep: #080a18;
+  --deep-2: #05060f;
+  --brand-lift: #9d92ff;
+
+  --skeleton-base: #1e2240;
+  --skeleton-sheen: rgb(255 255 255 / 8%);
 }
 
 html,
 body {
-  background: var(--color-canvas);
-  color: var(--color-ink);
+  background: var(--canvas);
+  color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+
+/*
+ * Theme changes crossfade rather than snapping, but only on elements that
+ * actually carry theme colour, and never on transform. Applying a transition
+ * to everything would fight the entrance animations mid-flight.
+ */
+html.theme-switching,
+html.theme-switching body,
+html.theme-switching .card,
+html.theme-switching nav,
+html.theme-switching header {
+  transition: background-color 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
 
 body {
@@ -35,9 +147,15 @@ body {
 
 /* Cards carry a soft lift rather than a hard border. */
 .card {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: 1rem;
-  box-shadow: 0 1px 2px rgb(26 26 46 / 4%), 0 8px 24px -12px rgb(26 26 46 / 12%);
+  box-shadow: var(--shadow-card);
+}
+
+/* Shadows do almost nothing on a dark ground, so cards there earn their edge
+   from a hairline border instead. Without this they dissolve into the page. */
+:root[data-theme='dark'] .card {
+  border: 1px solid var(--line);
 }
 
 /* ---------------------------------------------------------------------------
@@ -48,13 +166,54 @@ body {
    did it succeed, did the state change, or can I interact with it.
    --------------------------------------------------------------------------- */
 
+/*
+ * Category tints. Each is a soft fill plus a legible label colour, defined here
+ * rather than inline so both themes stay in one place. In dark mode the fill
+ * becomes a deep tint of the same hue instead of a pastel, which would
+ * otherwise read as a bright chip on a dark card.
+ */
+.cat-coding { background: #eeecfe; color: #5546e8; }
+.cat-security { background: #e8f1fe; color: #2b6fd6; }
+.cat-design { background: #e4f7f0; color: #17a673; }
+.cat-content { background: #fdeee2; color: #d1741c; }
+.cat-research { background: #fef3e0; color: #b8860b; }
+.cat-community { background: #fde8f0; color: #c2407a; }
+.cat-other { background: #eeeef4; color: #6b6b85; }
+
+:root[data-theme='dark'] .cat-coding { background: #241f4d; color: #a99bff; }
+:root[data-theme='dark'] .cat-security { background: #16294a; color: #77aaf0; }
+:root[data-theme='dark'] .cat-design { background: #102e26; color: #4fd3a3; }
+:root[data-theme='dark'] .cat-content { background: #33220f; color: #e79a4e; }
+:root[data-theme='dark'] .cat-research { background: #302511; color: #e0a94a; }
+:root[data-theme='dark'] .cat-community { background: #331726; color: #ec7fae; }
+:root[data-theme='dark'] .cat-other { background: #232640; color: #9a9ab8; }
+
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
 
+/* Travel distance and duration are the whole difference between motion that
+   reads and motion that flickers. 12px over 0.42s was invisible; 40px over
+   0.7s is the range comparable products actually use. */
 @keyframes rise {
-  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  from { opacity: 0; transform: translate3d(0, 40px, 0); }
   to { opacity: 1; transform: none; }
+}
+
+/* Continuous, barely-there drift for the device preview, with a touch of
+   rotation so it reads as a physical object rather than a sliding rectangle. */
+@keyframes float-device {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.6deg); }
+  50% { transform: translate3d(0, -14px, 0) rotate(0.6deg); }
+}
+
+.float-device {
+  animation: float-device 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-device { animation: none; }
 }
 
 @keyframes pop {
@@ -65,6 +224,42 @@ body {
 
 @keyframes draw {
   to { stroke-dashoffset: 0; }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(-50%, 0, 0) scale(1); }
+  50% { transform: translate3d(-50%, 14px, 0) scale(1.06); }
+}
+
+/* Floating hero icons. Slow, small-amplitude drift on transform only, so the
+   compositor handles it and nothing reflows. Purely decorative, so they are
+   aria-hidden and vanish entirely under reduced motion. */
+@keyframes float-a {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -9px, 0) rotate(3deg); }
+}
+
+@keyframes float-b {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, 7px, 0) rotate(-4deg); }
+}
+
+.floaty {
+  animation: float-a 7s ease-in-out infinite;
+}
+
+.floaty-alt {
+  animation: float-b 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floaty,
+  .floaty-alt { animation: none; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.35; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
 }
 
 @keyframes pulse-ring {
@@ -83,15 +278,17 @@ body {
    final state, so the worst case is no animation rather than no content. */
 .reveal {
   opacity: 0;
-  transform: translate3d(0, 12px, 0);
+  /* 40px, not 12. Travel distance is what makes a reveal read as motion
+     rather than a flicker; comparable products use 40-50px. */
+  transform: translate3d(0, 40px, 0);
 }
 
 .reveal-in {
   opacity: 1;
   transform: none;
   transition:
-    opacity 0.42s ease var(--reveal-delay, 0ms),
-    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+    opacity 0.72s ease var(--reveal-delay, 0ms),
+    transform 0.72s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
 }
 
 .pop-in {
@@ -173,7 +370,7 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: #eceaf4;
+  background: var(--skeleton-base);
   border-radius: 1rem;
 }
 
@@ -182,10 +379,67 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 70%), transparent);
+  background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
   animation: shimmer 1.6s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after { animation: none; }
+}
+
+/* Headline accent: gold into brand, matching the mark's own two colours.
+   Used on one word of one heading; anything more and it stops reading as
+   emphasis. */
+.text-gradient {
+  background: linear-gradient(100deg, var(--gold) 0%, var(--brand) 55%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Gentle suspension for the hero callouts. Smaller travel than the device
+   float and a slight sideways component, so they read as drifting rather than
+   bobbing on a single axis. */
+@keyframes float-soft {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(7px, -6px, 0); }
+  50%  { transform: translate3d(0, -12px, 0); }
+  75%  { transform: translate3d(-7px, -6px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.float-soft {
+  animation-name: float-soft;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-soft { animation: none; }
+}
+
+/* Secondary actions get the same idea at a whisper: a slow sheen that only
+   moves on hover, so they never compete with the primary. */
+.cta-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(100deg, transparent 30%, var(--brand-soft) 50%, transparent 70%);
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .cta-sheen:hover::after { transform: translateX(120%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-sheen::after { display: none; }
 }

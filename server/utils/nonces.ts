@@ -45,5 +45,5 @@ export async function consumeNonce(nonce: string, address: string): Promise<bool
 }
 
 export function nonceMessage(nonce: string): string {
-  return `Nimiq Bounty login\nnonce: ${nonce}`
+  return `Trove login\nnonce: ${nonce}`
 }

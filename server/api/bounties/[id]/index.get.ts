@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm'
-import { bounties, payouts, submissions, useDb } from '../../../db'
-import { addressesMatch, lunaToNim } from '../../../utils/nimiq'
+import { and, eq } from 'drizzle-orm'
+import { bounties, payouts, referralPayouts, referrals, submissions, useDb } from '../../../db'
+import { REFERRAL_PERCENT, referralSplit } from '../../../utils/escrow'
+import { addressesMatch, lunaToNim, normalizeAddress } from '../../../utils/nimiq'
 import { getAddress } from '../../../utils/session'
 
 export default defineEventHandler(async (event) => {
@@ -30,6 +31,25 @@ export default defineEventHandler(async (event) => {
   const payout = await db.query.payouts.findFirst({ where: eq(payouts.bountyId, id) })
   const explorer = (hash?: string | null) => hash ? `${config.public.explorerBase}/${hash}` : null
 
+  // Only the viewer's own referral, never anyone else's. Exposing the full
+  // list would leak who referred whom, and the public bounty card is meant to
+  // show the headline reward without the split cluttering it.
+  const myReferral = viewer
+    ? await db.query.referrals.findFirst({
+        where: and(eq(referrals.bountyId, id), eq(referrals.hunterAddress, normalizeAddress(viewer))),
+      })
+    : null
+
+  // Disclosure: what a referred hunter would actually receive. A hunter who
+  // reads "250 NIM" and is paid 237.5 has been misled, and that would undercut
+  // the whole verified-reward claim.
+  const base = Math.min(bounty.rewardLuna, bounty.fundedLuna)
+  const split = referralSplit(base)
+
+  const referralPayout = await db.query.referralPayouts.findFirst({
+    where: eq(referralPayouts.bountyId, id),
+  })
+
   return {
     ...bounty,
     rewardNim: lunaToNim(bounty.rewardLuna),
@@ -53,5 +73,25 @@ export default defineEventHandler(async (event) => {
           verifiedAt: payout.verifiedAt,
         }
       : null,
+
+    referral: {
+      percent: REFERRAL_PERCENT,
+      // What a referred hunter nets, versus the headline reward.
+      winnerNim: lunaToNim(split.winnerLuna),
+      referrerNim: lunaToNim(split.referralLuna),
+      // The viewer's own accepted referral, if any.
+      mine: myReferral
+        ? { referrerAddress: myReferral.referrerAddress, acceptedAt: myReferral.createdAt }
+        : null,
+      payout: referralPayout
+        ? {
+            status: referralPayout.status,
+            amountNim: lunaToNim(referralPayout.amountLuna),
+            referrerAddress: referralPayout.referrerAddress,
+            txHash: referralPayout.txHash,
+            explorerUrl: explorer(referralPayout.txHash),
+          }
+        : null,
+    },
   }
 })

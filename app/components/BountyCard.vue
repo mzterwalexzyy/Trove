@@ -62,7 +62,7 @@ const urgent = computed(() => props.bounty.deadlineAt - Date.now() / 1000 < 8640
       </span>
       <p
         class="mt-1.5 text-[11px] font-medium"
-        :class="remaining ? (urgent ? 'text-[#d1453b]' : 'text-muted') : 'text-muted'"
+        :class="remaining ? (urgent ? 'text-danger' : 'text-muted') : 'text-muted'"
       >
         {{ remaining ? `${remaining} left` : 'Closed' }}
       </p>

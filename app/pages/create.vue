@@ -15,6 +15,23 @@ const form = reactive({
 
 const toast = useToast()
 
+/** Keeper fills the form; it never submits it. */
+function applyDraft(draft: {
+  title: string
+  description: string
+  requirements: string
+  category: string
+  suggestedRewardNim: number
+  suggestedDays: number
+}) {
+  form.title = draft.title
+  form.description = draft.description
+  form.requirements = draft.requirements
+  form.category = draft.category
+  form.rewardNim = draft.suggestedRewardNim
+  form.days = draft.suggestedDays
+}
+
 type Stage = 'idle' | 'creating' | 'awaiting_wallet' | 'verifying' | 'confirmed' | 'error'
 const stage = ref<Stage>('idle')
 const problem = ref('')
@@ -131,12 +148,18 @@ async function confirmFunding() {
         v-for="n in 4"
         :key="n"
         class="h-1.5 flex-1 rounded-full transition-colors"
-        :class="n <= step ? 'bg-brand' : 'bg-[#e2e0ec]'"
+        :class="n <= step ? 'bg-brand' : 'bg-track'"
       />
     </div>
 
     <!-- Step 1: basics -->
-    <div v-if="step === 1" class="card mt-4 flex flex-col gap-4 px-4 py-5">
+    <!-- Keeper drafts into the same form the creator would fill by hand, so
+         everything below stays editable and nothing is skipped. -->
+    <div v-if="step === 1" class="mt-4">
+      <KeeperDraft @applied="applyDraft" />
+    </div>
+
+    <div v-if="step === 1" class="card mt-3 flex flex-col gap-4 px-4 py-5">
       <label class="flex flex-col gap-1.5">
         <span class="text-[13px] font-semibold">What needs doing?</span>
         <input
@@ -274,7 +297,7 @@ async function confirmFunding() {
         </button>
       </div>
 
-      <p class="rounded-xl bg-brand-soft px-4 py-3 text-[12px] leading-relaxed text-[#3d3193]">
+      <p class="rounded-xl bg-brand-soft px-4 py-3 text-[12px] leading-relaxed text-brand-ink">
         Your NIM goes to a platform escrow wallet on the Nimiq testnet, and the bounty
         goes live only once we confirm the transfer on chain. Nimiq has no smart
         contracts, so this escrow is custodial rather than trustless. You alone choose
@@ -297,7 +320,7 @@ async function confirmFunding() {
         </div>
       </Transition>
 
-      <p v-if="!isInsideNimiqPay" class="rounded-xl bg-[#fdf6e8] px-4 py-3 text-[12px] leading-relaxed text-[#8a5d05]">
+      <p v-if="!isInsideNimiqPay" class="rounded-xl bg-warn-soft px-4 py-3 text-[12px] leading-relaxed text-warn">
         Open this Mini App inside Nimiq Pay to fund the bounty from your wallet.
       </p>
     </div>

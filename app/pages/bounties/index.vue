@@ -61,7 +61,7 @@ const sorts = [
       </button>
     </div>
 
-    <div class="mt-3 flex gap-1 rounded-xl bg-[#eceaf4] p-1">
+    <div class="mt-3 flex gap-1 rounded-xl bg-track p-1">
       <button
         v-for="option in sorts"
         :key="option.value"

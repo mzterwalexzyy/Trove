@@ -24,7 +24,7 @@ const shortfall = computed(() => props.rewardNim - props.fundedNim)
   >
     <div
       class="px-5 py-5"
-      :class="verified ? 'bg-success-soft' : 'bg-[#fdf6e8]'"
+      :class="verified ? 'bg-success-soft' : 'bg-warn-soft'"
     >
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -34,7 +34,7 @@ const shortfall = computed(() => props.rewardNim - props.fundedNim)
             <span class="text-lg font-semibold">NIM</span>
           </p>
           <p class="mt-1.5 text-xs font-semibold uppercase tracking-wider"
-             :class="verified ? 'text-success' : 'text-[#8a5d05]'">
+             :class="verified ? 'text-success' : 'text-warn'">
             {{ verified ? 'Secured in escrow' : 'Not yet funded' }}
           </p>
         </div>

@@ -62,8 +62,8 @@ const failedAt = computed(() =>
           :class="{
             'bg-success text-white': step.state === 'done',
             'bg-brand text-white': step.state === 'active',
-            'bg-[#e6e4ee] text-transparent': step.state === 'todo',
-            'bg-[#e0524a] text-white': step.state === 'failed',
+            'bg-track text-transparent': step.state === 'todo',
+            'bg-danger text-white': step.state === 'failed',
           }"
         >
           <!-- A ring pulses outward only on the step currently in flight. -->
@@ -94,7 +94,7 @@ const failedAt = computed(() =>
         <span
           v-if="index < steps.length - 1"
           class="mt-0.5 w-0.5 flex-1 rounded-full transition-colors duration-500"
-          :class="step.state === 'done' ? 'bg-success/40' : 'bg-[#e6e4ee]'"
+          :class="step.state === 'done' ? 'bg-success/40' : 'bg-track'"
           style="min-height: 14px"
         />
       </span>
@@ -105,7 +105,7 @@ const failedAt = computed(() =>
     </li>
 
     <Transition name="expand">
-      <li v-if="error" class="mt-1 rounded-xl bg-[#fdeaea] px-3 py-2.5 text-[13px] leading-relaxed text-[#c0392b]">
+      <li v-if="error" class="mt-1 rounded-xl bg-danger-soft px-3 py-2.5 text-[13px] leading-relaxed text-danger">
         {{ error }}
       </li>
     </Transition>

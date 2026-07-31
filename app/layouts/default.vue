@@ -3,25 +3,20 @@ const route = useRoute()
 const { providerState } = useWallet()
 
 const tabs = [
-  { to: '/', label: 'Home', icon: 'M3 10.5 12 3l9 7.5M5.5 9.5V21h13V9.5' },
+  { to: '/home', label: 'Home', icon: 'M3 10.5 12 3l9 7.5M5.5 9.5V21h13V9.5' },
   { to: '/bounties', label: 'Bounties', icon: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3' },
-  { to: '/submissions', label: 'Submissions', icon: 'M8 3h8l4 4v14H4V3h4Zm0 8h8M8 15h5' },
+  { to: '/leaderboard', label: 'Ranks', icon: 'M8 21V9m4 12V3m4 18v-7M3 21h18' },
   { to: '/me', label: 'Profile', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 21a7.5 7.5 0 0 1 15 0' },
 ]
 
 function isActive(to: string) {
-  return to === '/' ? route.path === '/' : route.path.startsWith(to)
+  return route.path === to || route.path.startsWith(`${to}/`)
 }
 </script>
 
 <template>
   <div class="min-h-dvh bg-canvas">
-    <p
-      v-if="providerState === 'unavailable'"
-      class="bg-gold/12 px-5 py-2.5 text-center text-xs leading-relaxed text-[#8a5d05]"
-    >
-      Open in Nimiq Pay to fund bounties and get paid. Browsing works anywhere.
-    </p>
+    <OpenInNimiqPay v-if="providerState === 'unavailable'" />
 
     <div class="mx-auto w-full max-w-lg pb-28">
       <slot />
