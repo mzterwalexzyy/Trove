@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useHead({ title: 'Complete tasks. Earn NIM.' })
 
-const { address } = useWallet()
+const { address, connect, connecting } = useWallet()
 
 // No redirect here. This page is the app, and anyone who navigates to it
 // meant to. The one bounce that exists lives on `/`, sending Nimiq Pay users
@@ -43,6 +43,41 @@ const steps = [
         >
           {{ shortAddress(address) }}
         </NuxtLink>
+        <!-- Just the icon: the wallet connection is the one action people already
+             know from every other app, so it needs no label. Once connected it is
+             replaced by the address chip above. -->
+        <button
+          v-else
+          type="button"
+          :disabled="connecting"
+          aria-label="Connect wallet"
+          class="grid size-8 place-items-center rounded-full bg-brand-soft text-brand transition disabled:opacity-60"
+          @click="connect"
+        >
+          <svg
+            v-if="connecting"
+            class="size-4 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" stroke-opacity="0.25" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <svg
+            v-else
+            class="size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2" />
+            <path d="M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2Z" />
+            <circle cx="16.5" cy="12.5" r="1.2" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
       </div>
     </header>
 
