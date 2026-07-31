@@ -1,4 +1,4 @@
-# Nimiq Bounty
+# Trove
 
 Turn tasks into funded opportunities.
 
@@ -84,7 +84,7 @@ The dev server binds to `0.0.0.0:5173`. Open the LAN URL from Nimiq Pay's Mini
 Apps section on a phone (both on the same network). Switch Nimiq Pay to testnet
 by long-pressing the settings button for ten seconds, then use "Get free NIM".
 
-Environment variables are listed in `HANDOFF.md`.
+Environment variables are listed in `.env.example`.
 
 ## Tests
 
@@ -99,13 +99,23 @@ node scripts/audit-concurrency.mjs
 ```
 
 ```bash
+node scripts/e2e-referral.mjs
+```
+
+```bash
 node scripts/audit-db.mjs
 ```
 
 `e2e-slice` drives the whole lifecycle with two wallets and asserts the
-winner's on-chain balance actually changed. `audit-concurrency` fires parallel
-funding, winner-selection and payout requests and asserts no duplicate payment
-occurs. `audit-db` checks schema constraints, query plans and solvency.
+winner's on-chain balance actually changed. `e2e-referral` adds a third wallet
+and settles both payout legs, asserting the split sums to exactly the funded
+amount and that the bounty completes only once both legs confirm.
+`audit-concurrency` fires parallel funding, winner-selection and payout
+requests and asserts no duplicate payment occurs. `audit-db` checks schema
+constraints, query plans and solvency.
+
+Both end-to-end suites create a bounty with a short entry window and wait for
+it to close, because a winner cannot be selected while a bounty is still open.
 
 ## Known limitations
 
