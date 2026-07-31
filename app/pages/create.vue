@@ -32,6 +32,24 @@ function applyDraft(draft: {
   form.days = draft.suggestedDays
 }
 
+/**
+ * The floating Keeper bubble drafts from anywhere, stashes the result in
+ * session storage, and routes here with ?draft=keeper. Pick it up once, then
+ * clear it so a later manual visit to /create starts blank.
+ */
+const route = useRoute()
+onMounted(() => {
+  if (route.query.draft !== 'keeper') return
+  try {
+    const raw = sessionStorage.getItem('trove-keeper-draft')
+    if (raw) applyDraft(JSON.parse(raw))
+  }
+  catch { /* malformed or storage blocked; form stays empty and editable */ }
+  finally {
+    sessionStorage.removeItem('trove-keeper-draft')
+  }
+})
+
 type Stage = 'idle' | 'creating' | 'awaiting_wallet' | 'verifying' | 'confirmed' | 'error'
 const stage = ref<Stage>('idle')
 const problem = ref('')
