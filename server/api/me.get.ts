@@ -1,5 +1,5 @@
 import { desc, eq, sql } from 'drizzle-orm'
-import { bounties, payouts, submissions, transactions, useDb } from '../db'
+import { bounties, payouts, submissions, transactions, useDb, users } from '../db'
 import { lunaToNim } from '../utils/nimiq'
 import { getAddress } from '../utils/session'
 
@@ -56,8 +56,18 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(transactions.createdAt))
     .limit(25)
 
+  const me = await db.query.users.findFirst({ where: eq(users.address, address) })
+  const COOLDOWN_SECONDS = 14 * 86400
+
   return {
     address,
+    // Self-declared, never verified. Named so no client can mistake it.
+    handles: {
+      xHandle: me?.xHandle ?? null,
+      githubHandle: me?.githubHandle ?? null,
+      changedAt: me?.handlesChangedAt ?? null,
+      nextChangeAt: me?.handlesChangedAt ? me.handlesChangedAt + COOLDOWN_SECONDS : null,
+    },
     stats: {
       bountiesCreated: created.length,
       bountiesFunded: created.filter(b => b.fundedLuna > 0).length,

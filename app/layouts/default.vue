@@ -3,7 +3,7 @@ const route = useRoute()
 const { providerState } = useWallet()
 
 const tabs = [
-  { to: '/', label: 'Home', icon: 'M3 10.5 12 3l9 7.5M5.5 9.5V21h13V9.5' },
+  { to: '/app', label: 'Home', icon: 'M3 10.5 12 3l9 7.5M5.5 9.5V21h13V9.5' },
   { to: '/bounties', label: 'Bounties', icon: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3' },
   { to: '/leaderboard', label: 'Ranks', icon: 'M8 21V9m4 12V3m4 18v-7M3 21h18' },
   { to: '/me', label: 'Profile', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 21a7.5 7.5 0 0 1 15 0' },
@@ -21,6 +21,12 @@ function isActive(to: string) {
     <div class="mx-auto w-full max-w-lg pb-28">
       <slot />
     </div>
+
+    <!-- Keeper follows the user through the app rather than living on one
+         page, so a task can be drafted the moment it occurs to someone. -->
+    <ClientOnly>
+      <KeeperBubble />
+    </ClientOnly>
 
     <nav
       class="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur"

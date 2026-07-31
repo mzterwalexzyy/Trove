@@ -6,12 +6,29 @@ import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqli
  * Floating point never touches a balance.
  */
 
+/**
+ * Handles are self-declared, not verified. Nothing here proves the wallet
+ * owner controls the account, so the UI says "linked", never "verified":
+ * overstating it would undercut the one claim this product does prove.
+ *
+ * The cooldown is what gives them any weight at all. A handle that cannot be
+ * swapped for two weeks is a weak commitment rather than a free-form field,
+ * and it stops someone cycling through identities between bounties.
+ */
 export const users = sqliteTable('users', {
   address: text('address').primaryKey(),
   displayName: text('display_name'),
+  xHandle: text('x_handle'),
+  githubHandle: text('github_handle'),
+  handlesChangedAt: integer('handles_changed_at'),
   createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
   lastSeenAt: integer('last_seen_at').notNull().default(sql`(unixepoch())`),
-})
+}, table => [
+  // One handle per wallet, and one wallet per handle. Without these a single
+  // account could back several wallets and inherit their reputation.
+  uniqueIndex('users_x_handle_unique').on(table.xHandle),
+  uniqueIndex('users_github_handle_unique').on(table.githubHandle),
+])
 
 /**
  * Bounty lifecycle:
