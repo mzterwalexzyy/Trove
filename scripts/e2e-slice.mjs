@@ -134,7 +134,9 @@ const createRes = await clientA('/api/bounties', {
     requirements: 'Explain the bug and link a fix.',
     category: 'coding',
     rewardNim: REWARD_NIM,
-    deadlineAt: Math.floor(Date.now() / 1000) + 7 * 86400,
+    // Entries must be closed before a winner can be chosen, so the test bounty
+    // opens with a deadline that has already passed.
+    deadlineAt: Math.floor(Date.now() / 1000) + 25,
   },
 })
 check('bounty created', createRes.status === 200, createRes.body?.id ?? JSON.stringify(createRes.body))
@@ -235,6 +237,18 @@ const outsiderPay = await clientB(`/api/bounties/${bountyId}/winner`, {
   method: 'POST',
   body: { submissionId },
 })
+
+// Entries close before a winner may be chosen, so the fixture opens with a
+// short window: long enough to submit, then waited out before awarding.
+{
+  const openBounty = await clientA(`/api/bounties/${bountyId}`)
+  const closesAt = openBounty.body?.deadlineAt ?? 0
+  const waitMs = Math.max(0, (closesAt + 2) * 1000 - Date.now())
+  if (waitMs > 0) {
+    console.log(`waiting ${Math.ceil(waitMs / 1000)}s for entries to close`)
+    await new Promise(r => setTimeout(r, waitMs))
+  }
+}
 check('non-creator cannot select a winner', outsiderPay.status === 403, String(outsiderPay.status))
 
 const winnerRes = await clientA(`/api/bounties/${bountyId}/winner`, {

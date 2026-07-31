@@ -161,7 +161,9 @@ const created = await clientA('/api/bounties', {
     requirements: 'Explain NIM in 200 words.',
     category: 'content',
     rewardNim: REWARD_NIM,
-    deadlineAt: Math.floor(Date.now() / 1000) + 7 * 86400,
+    // Entries must be closed before a winner can be chosen, so the test bounty
+    // opens with a deadline that has already passed.
+    deadlineAt: Math.floor(Date.now() / 1000) + 25,
   },
 })
 check('bounty created', created.status === 200, created.body?.id ?? JSON.stringify(created.body))
@@ -242,6 +244,18 @@ const detail = await clientB(`/api/bounties/${bountyId}`)
 check('hunter sees their own referral', detail.body?.referral?.mine?.referrerAddress?.replace(/\s/g, '') === referrerAddress.replace(/\s/g, ''))
 check('net-to-winner is disclosed', detail.body?.referral?.winnerNim === 19, String(detail.body?.referral?.winnerNim))
 
+
+// Entries close before a winner may be chosen, so the fixture opens with a
+// short window: long enough to submit, then waited out before awarding.
+{
+  const openBounty = await clientA(`/api/bounties/${bountyId}`)
+  const closesAt = openBounty.body?.deadlineAt ?? 0
+  const waitMs = Math.max(0, (closesAt + 2) * 1000 - Date.now())
+  if (waitMs > 0) {
+    console.log(`waiting ${Math.ceil(waitMs / 1000)}s for entries to close`)
+    await new Promise(r => setTimeout(r, waitMs))
+  }
+}
 console.log('\n--- select winner and pay both legs ---')
 const submissionId = detail.body.submissions[0].id
 const winner = await clientA(`/api/bounties/${bountyId}/winner`, {

@@ -32,6 +32,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'This bounty is not funded' })
   }
 
+  // Entries close before a winner is chosen. Awarding while the bounty is
+  // still open would let a creator end it under someone who is mid-way
+  // through their submission, with no warning and no recourse.
+  const now = Math.floor(Date.now() / 1000)
+  if (bounty.deadlineAt > now) {
+    const hoursLeft = Math.ceil((bounty.deadlineAt - now) / 3600)
+    throw createError({
+      statusCode: 409,
+      statusMessage: `This bounty is still open for entries. A winner can be selected once it closes, in about ${hoursLeft}h.`,
+    })
+  }
+
   // Once a payout exists the winner is settled, whatever its status. Changing
   // it afterwards could point a retry at a different address.
   const existingPayout = await db.query.payouts.findFirst({ where: eq(payouts.bountyId, bountyId) })
