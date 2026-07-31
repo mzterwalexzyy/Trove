@@ -180,10 +180,15 @@ async function confirmFunding() {
     </div>
 
     <!-- Step 1: basics -->
-    <!-- Keeper drafts into the same form the creator would fill by hand, so
-         everything below stays editable and nothing is skipped. -->
-    <div v-if="step === 1" class="mt-4">
-      <KeeperDraft @applied="applyDraft" />
+    <!-- Keeper lives in the floating bubble now; it drafts into this same form
+         via the create route, so everything below stays editable by hand. -->
+    <div v-if="step === 1" class="card mt-4 flex items-start gap-2.5 bg-brand-soft px-4 py-3">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="mt-0.5 size-4 shrink-0 text-brand">
+        <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" stroke-linecap="round" />
+      </svg>
+      <p class="text-[12px] leading-relaxed text-brand-ink">
+        Stuck on wording? Tap the floating Keeper button to draft this bounty from a plain description, then edit anything here.
+      </p>
     </div>
 
     <div v-if="step === 1" class="card mt-3 flex flex-col gap-4 px-4 py-5">

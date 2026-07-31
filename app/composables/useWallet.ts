@@ -130,6 +130,20 @@ export function useWallet() {
     }))
   }
 
+  /**
+   * Forgets the wallet on this device. Clears the session cookie server-side
+   * and the address locally. Nothing on chain moves; reconnecting the same
+   * wallet restores every bounty and payout untouched.
+   */
+  async function disconnect() {
+    try {
+      await $fetch('/api/auth/logout', { method: 'POST', timeout: 10_000 })
+    }
+    catch { /* clearing the local address is what the user sees; do it regardless */ }
+    address.value = null
+    error.value = null
+  }
+
   return {
     address,
     providerState,
@@ -141,5 +155,6 @@ export function useWallet() {
     restore,
     connect,
     sendWithMemo,
+    disconnect,
   }
 }
