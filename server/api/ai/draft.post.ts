@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
       headers: {
         'Authorization': `Bearer ${provider.key}`,
         // OpenRouter uses these for attribution; harmless elsewhere.
-        'HTTP-Referer': 'https://nimiq-bounty.vercel.app',
+        'HTTP-Referer': 'https://trove-nimiq.vercel.app',
         'X-Title': 'Trove',
       },
       body: {

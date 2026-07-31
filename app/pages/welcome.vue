@@ -41,12 +41,12 @@ const headlineStats = computed(() => [
  * to load its own loopback and fail confusingly.
  */
 const nimiqPayLink = computed(() => {
-  const host = import.meta.client ? window.location.host : 'nimiq-bounty.vercel.app'
+  const host = import.meta.client ? window.location.host : 'trove-nimiq.vercel.app'
 
   // A phone opening a loopback or LAN deeplink would try to reach itself, so
   // dev hosts fall back to production.
   const isLocal = /^(localhost|127\.|10\.|172\.|192\.168\.)/.test(host)
-  const target = isLocal ? 'nimiq-bounty.vercel.app' : host
+  const target = isLocal ? 'trove-nimiq.vercel.app' : host
 
   // Bare domain, no scheme, not percent-encoded. The documented form is
   // `nimiqpay://miniapp?url=your-app.com`; passing a full encoded origin makes
