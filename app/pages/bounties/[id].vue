@@ -66,19 +66,56 @@ const shareText = computed(() =>
     ? `There is a ${formatNim(bounty.value.rewardNim)} NIM bounty for this. Think you can solve it?`
     : '')
 
-/** Prebuilt intent URLs per app, each carrying the text and link so the sharer
- *  posts something ready to send rather than a bare address. */
+/** Prebuilt targets per app. `scheme` is the native app deep link, which an
+ *  in-app webview hands off to the OS so the real app opens; `web` is the
+ *  browser fallback used when no app claims the scheme. Both carry the text
+ *  and link so the sharer posts something ready to send. */
 const shareTargets = computed(() => {
   const text = shareText.value
   const link = shareLink.value
-  const encoded = encodeURIComponent(`${text} ${link}`)
+  const both = encodeURIComponent(`${text} ${link}`)
+  const encText = encodeURIComponent(text)
+  const encLink = encodeURIComponent(link)
+  const title = encodeURIComponent(bounty.value?.title ?? text)
   return [
-    { key: 'x', label: 'X', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}` },
-    { key: 'telegram', label: 'Telegram', href: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}` },
-    { key: 'whatsapp', label: 'WhatsApp', href: `https://wa.me/?text=${encoded}` },
-    { key: 'reddit', label: 'Reddit', href: `https://www.reddit.com/submit?url=${encodeURIComponent(link)}&title=${encodeURIComponent(bounty.value?.title ?? text)}` },
+    { key: 'x', label: 'X', scheme: `twitter://post?message=${both}`, web: `https://twitter.com/intent/tweet?text=${encText}&url=${encLink}` },
+    { key: 'telegram', label: 'Telegram', scheme: `tg://msg_url?url=${encLink}&text=${encText}`, web: `https://t.me/share/url?url=${encLink}&text=${encText}` },
+    { key: 'whatsapp', label: 'WhatsApp', scheme: `whatsapp://send?text=${both}`, web: `https://wa.me/?text=${both}` },
+    { key: 'reddit', label: 'Reddit', scheme: '', web: `https://www.reddit.com/submit?url=${encLink}&title=${title}` },
   ]
 })
+
+/**
+ * Opens a share target, preferring the native app. Setting the native scheme
+ * lets the host webview pass it to the OS, which foregrounds the real app; if
+ * nothing claims it within a moment (app not installed), the browser version
+ * opens instead. The visibility check avoids opening the web fallback on top
+ * of an app that did take over.
+ */
+function shareVia(target: { scheme: string, web: string }) {
+  showShare.value = false
+  if (!target.scheme) {
+    window.open(target.web, '_blank', 'noopener')
+    return
+  }
+  const timer = window.setTimeout(() => {
+    if (!document.hidden) window.open(target.web, '_blank', 'noopener')
+  }, 900)
+  const onHide = () => {
+    if (document.hidden) {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }
+  document.addEventListener('visibilitychange', onHide)
+  try {
+    window.location.href = target.scheme
+  }
+  catch {
+    clearTimeout(timer)
+    window.open(target.web, '_blank', 'noopener')
+  }
+}
 
 async function shareBounty() {
   if (sharing.value) return
@@ -550,17 +587,15 @@ async function pollPayout() {
           </p>
 
           <div class="mt-4 grid grid-cols-4 gap-2">
-            <a
+            <button
               v-for="target in shareTargets"
               :key="target.key"
-              :href="target.href"
-              target="_blank"
-              rel="noopener"
+              type="button"
               class="pressable flex flex-col items-center gap-1.5 rounded-xl bg-canvas py-3 text-[12px] font-semibold"
-              @click="showShare = false"
+              @click="shareVia(target)"
             >
               {{ target.label }}
-            </a>
+            </button>
           </div>
 
           <button
