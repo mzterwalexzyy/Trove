@@ -29,8 +29,15 @@ function open() {
   if (!import.meta.client || trying.value) return
   trying.value = true
 
-  // Nimiq Pay expects the mini app's own URL as the target.
-  const target = `nimiqpay://miniapp?url=${encodeURIComponent(window.location.href)}`
+  // Bare domain, no scheme, not percent-encoded. The documented form is
+  // `nimiqpay://miniapp?url=your-app.com`; a full encoded URL makes Nimiq Pay
+  // open without ever loading the Mini App.
+  //
+  // A phone opening a loopback or LAN deeplink would try to reach itself, so
+  // dev hosts fall back to production.
+  const host = window.location.host
+  const isLocal = /^(localhost|127\.|10\.|172\.|192\.168\.)/.test(host)
+  const target = `nimiqpay://miniapp?url=${isLocal ? 'trove-nimiq.vercel.app' : host}`
 
   // Only a visible -> hidden transition means another app took over. Reading
   // the current state instead would call it handled whenever the page started

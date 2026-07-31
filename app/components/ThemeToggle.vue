@@ -6,6 +6,8 @@
  * option, and tapping it there means "make it the other one". The full
  * light/auto/dark control lives on the Profile page.
  */
+const { compact = false } = defineProps<{ compact?: boolean }>()
+
 const { resolved, set } = useTheme()
 </script>
 
@@ -15,12 +17,16 @@ const { resolved, set } = useTheme()
     role="switch"
     :aria-checked="resolved === 'dark'"
     aria-label="Toggle dark mode"
-    class="relative flex h-9 w-[52px] shrink-0 items-center rounded-full border border-line bg-surface px-1 transition-colors"
+    class="relative flex shrink-0 items-center rounded-full border border-line bg-surface transition-colors"
+    :class="compact ? 'h-8 w-[46px] px-0.5' : 'h-9 w-[52px] px-1'"
     @click="set(resolved === 'dark' ? 'light' : 'dark')"
   >
     <span
-      class="flex size-7 items-center justify-center rounded-full bg-brand text-white transition-transform duration-300"
-      :class="resolved === 'dark' ? 'translate-x-[18px]' : 'translate-x-0'"
+      class="flex items-center justify-center rounded-full bg-brand text-white transition-transform duration-300"
+      :class="[
+        compact ? 'size-7' : 'size-7',
+        resolved === 'dark' ? (compact ? 'translate-x-[14px]' : 'translate-x-[18px]') : 'translate-x-0',
+      ]"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-3.5">
         <path

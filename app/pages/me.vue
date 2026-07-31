@@ -125,10 +125,5 @@ async function signIn() {
       </div>
     </template>
 
-    <!-- Outside the wallet gate on purpose: changing the theme should not
-         require connecting a wallet. -->
-    <div class="mt-4">
-      <ThemeSwitch />
-    </div>
   </div>
 </template>

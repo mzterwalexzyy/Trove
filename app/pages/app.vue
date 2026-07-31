@@ -32,16 +32,23 @@ const steps = [
         <BrandMark :size="28" />
         <span class="text-[17px] font-bold tracking-tight">Trove</span>
       </div>
-      <NuxtLink
-        v-if="address"
-        to="/me"
-        class="rounded-full bg-brand-soft px-3 py-1.5 font-mono text-[11px] font-semibold text-brand"
-      >
-        {{ shortAddress(address) }}
-      </NuxtLink>
+      <div class="flex items-center gap-2">
+        <!-- Theme lives here rather than buried in the profile: it is a display
+             preference people flip on sight, not a setting they go looking for. -->
+        <ThemeToggle compact />
+        <NuxtLink
+          v-if="address"
+          to="/me"
+          class="rounded-full bg-brand-soft px-3 py-1.5 font-mono text-[11px] font-semibold text-brand"
+        >
+          {{ shortAddress(address) }}
+        </NuxtLink>
+      </div>
     </header>
 
-    <section class="relative mx-4 mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-hero-from to-hero-to px-5 py-7">
+    <!-- No gradient here any more: the artwork below supplies the background,
+         and layering the two left a visible seam where they met. -->
+    <section class="relative mx-4 mt-4 overflow-hidden rounded-2xl bg-hero-from px-5 py-7">
       <!-- Decorative only: small task and reward glyphs drifting behind the
            copy. Low contrast and aria-hidden so they never compete with the
            headline or reach a screen reader. -->
@@ -61,13 +68,32 @@ const steps = [
         </svg>
       </div>
 
-      <h1 class="text-[30px] leading-[1.1] font-bold tracking-tight">
+      <!-- The artwork is the band's background at every width. It carries its
+           own solid ground and is drawn with empty space on the left, so
+           covering the band makes that ground the band and there is no
+           rectangle edge to hide. Anchored right so the chest stays in frame
+           as the card narrows. -->
+      <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <img :src="'/chest-light.png'" alt="" class="hero-art__light size-full object-cover object-right">
+        <img :src="'/chest-dark.png'" alt="" class="hero-art__dark size-full object-cover object-right">
+      </div>
+
+      <!-- No width caps on a phone: the banner sits below rather than behind,
+           so there is nothing to keep clear of, and capping the width was
+           breaking "Complete tasks." onto two lines. Capped only from `sm`,
+           where the artwork is the background. -->
+      <h1 class="relative text-[30px] leading-[1.1] font-bold tracking-tight sm:max-w-[62%]">
         Complete tasks.<br>Earn NIM.
       </h1>
-      <p class="mt-2.5 text-sm leading-relaxed text-muted">
+      <p class="relative mt-2.5 text-sm leading-relaxed text-muted sm:max-w-[58%]">
         Every reward is funded and confirmed on chain before anyone starts work.
       </p>
-      <div class="mt-5 flex flex-wrap gap-2.5">
+      <!-- `relative` so the buttons sit above the background layer. Without it
+           the artwork painted straight over them. -->
+      <!-- The two buttons need almost exactly the width available at 375px, so
+           they wrapped. Sharing the row keeps them on one line at every width
+           instead of stacking on the narrowest phones. -->
+      <div class="relative mt-5 flex gap-2.5 [&>a]:flex-1 sm:[&>a]:flex-none">
         <NuxtLink
           to="/create"
           class="flex min-h-[48px] items-center gap-1.5 rounded-xl bg-brand px-5 text-sm font-semibold text-white active:bg-brand-dark"
@@ -84,6 +110,7 @@ const steps = [
           Browse bounties
         </NuxtLink>
       </div>
+
     </section>
 
     <section v-reveal="0" class="card mx-4 mt-4 grid grid-cols-4 gap-1 px-2 py-4">
