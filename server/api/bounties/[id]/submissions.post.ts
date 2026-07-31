@@ -5,25 +5,40 @@ import { addressesMatch } from '../../../utils/nimiq'
 import { requireAddress } from '../../../utils/session'
 
 const MAX_CONTENT = 4000
+// Roughly 1.4MB of base64, which is ~1MB of actual image. The client downscales
+// before upload; this cap is the backstop against a hand-crafted request, not
+// the normal path. Anything larger belongs in a blob store this stack lacks.
+const MAX_IMAGE = 1_400_000
+const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i
 
 export default defineEventHandler(async (event) => {
   const address = await requireAddress(event)
   const bountyId = getRouterParam(event, 'id')!
-  const body = await readBody<{ content?: string, link?: string }>(event)
+  const body = await readBody<{ content?: string, link?: string, image?: string }>(event)
 
   const content = body?.content?.trim() ?? ''
   const link = body?.link?.trim() || null
+  const image = body?.image?.trim() || null
 
   if (!content || content.length > MAX_CONTENT) {
     throw createError({ statusCode: 400, statusMessage: `Submission must be 1 to ${MAX_CONTENT} characters` })
   }
-  // Proof of work is required: a bounty pays real NIM, so the creator needs a
-  // link to the actual code, design, or writing to judge against.
-  if (!link) {
-    throw createError({ statusCode: 400, statusMessage: 'A link to your work is required' })
-  }
-  if (!/^https?:\/\//i.test(link)) {
+  if (link && !/^https?:\/\//i.test(link)) {
     throw createError({ statusCode: 400, statusMessage: 'Link must start with http:// or https://' })
+  }
+  if (image) {
+    if (!IMAGE_DATA_URL.test(image)) {
+      throw createError({ statusCode: 400, statusMessage: 'Image must be a PNG, JPEG, WebP or GIF' })
+    }
+    if (image.length > MAX_IMAGE) {
+      throw createError({ statusCode: 400, statusMessage: 'Image is too large. Please use one under 1MB' })
+    }
+  }
+  // Proof of work is required: a bounty pays real NIM, so the creator needs
+  // something to judge against, whether that is a link to the code or writing,
+  // or an image of the design.
+  if (!link && !image) {
+    throw createError({ statusCode: 400, statusMessage: 'Attach a link or an image of your work' })
   }
 
   const db = useDb()
@@ -51,7 +66,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 409, statusMessage: 'Your submission already won this bounty' })
     }
     await db.update(submissions)
-      .set({ content, link })
+      .set({ content, link, image })
       .where(eq(submissions.id, existing.id))
     return { id: existing.id, updated: true }
   }
@@ -63,6 +78,7 @@ export default defineEventHandler(async (event) => {
     participantAddress: address,
     content,
     link,
+    image,
     status: 'submitted',
   })
 

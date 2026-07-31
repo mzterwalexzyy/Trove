@@ -74,6 +74,10 @@ export const submissions = sqliteTable('submissions', {
   participantAddress: text('participant_address').notNull().references(() => users.address),
   content: text('content').notNull(),
   link: text('link'),
+  // A design proof lives better as a picture than a link. Stored inline as a
+  // downscaled JPEG data URL: there is no blob store on this stack, and a
+  // mockup that small does not warrant one.
+  image: text('image'),
   status: text('status').notNull().default('submitted'),
   createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
 }, table => [

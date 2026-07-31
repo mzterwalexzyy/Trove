@@ -158,17 +158,18 @@ async function copyShareLink() {
 }
 
 // Submitting
-const submission = reactive({ content: '', link: '' })
+const submission = reactive({ content: '', link: '', image: '' })
 const submitting = ref(false)
 const submitError = ref('')
 const showSubmit = ref(false)
+const imageError = ref('')
 
 // Proof of work is required, not optional: a bounty pays real NIM, so a
 // creator needs something to judge. The wording follows the category, since a
 // design brief wants images and a coding one wants a repo.
 const proofLabel = computed(() => {
   switch (bounty.value?.category) {
-    case 'design': return 'Link to your images or mockups (Figma, Drive, Imgur…)'
+    case 'design': return 'Link to your images or mockups (optional if you attach one)'
     case 'coding':
     case 'security': return 'Link to your code (GitHub, GitLab, gist…)'
     case 'content': return 'Link to your writing (Docs, Notion, published post…)'
@@ -176,8 +177,75 @@ const proofLabel = computed(() => {
   }
 })
 const linkValid = computed(() => /^https?:\/\/\S+$/i.test(submission.link.trim()))
+const linkProvided = computed(() => submission.link.trim().length > 0)
+const hasImage = computed(() => submission.image.startsWith('data:image/'))
+// Content plus proof, where proof is a valid link or an attached image. A link
+// that is present must still be valid, so a typo is never silently accepted.
 const canSubmit = computed(() =>
-  submission.content.trim().length >= 3 && linkValid.value)
+  submission.content.trim().length >= 3
+  && (hasImage.value || linkValid.value)
+  && (!linkProvided.value || linkValid.value))
+
+async function onImagePick(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // let the same file be re-picked after a remove
+  if (!file) return
+  imageError.value = ''
+  if (!/^image\//.test(file.type)) {
+    imageError.value = 'That file is not an image'
+    return
+  }
+  try {
+    submission.image = await downscaleImage(file)
+  }
+  catch {
+    imageError.value = 'Could not read that image'
+  }
+}
+
+/**
+ * Shrinks a picked image to a data URL small enough to store inline. There is
+ * no blob store on this stack, so the picture rides in the request body and
+ * lands in a text column; a phone photo would be far too large. Capped to
+ * 1600px on the long edge, then JPEG quality steps down until it sits under
+ * the server's backstop.
+ */
+function downscaleImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('decode failed'))
+      img.onload = () => {
+        const MAX_EDGE = 1600
+        const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('no canvas'))
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        let quality = 0.82
+        let out = canvas.toDataURL('image/jpeg', quality)
+        // Aim under ~1.2MB, comfortably below the 1.4MB server cap.
+        while (out.length > 1_200_000 && quality > 0.4) {
+          quality -= 0.1
+          out = canvas.toDataURL('image/jpeg', quality)
+        }
+        resolve(out)
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function removeImage() {
+  submission.image = ''
+  imageError.value = ''
+}
 
 async function submitWork() {
   if (submitting.value) return
@@ -188,7 +256,11 @@ async function submitWork() {
   try {
     await $fetch(`/api/bounties/${id}/submissions`, {
       method: 'POST',
-      body: { content: submission.content.trim(), link: submission.link.trim() },
+      body: {
+        content: submission.content.trim(),
+        link: submission.link.trim() || undefined,
+        image: submission.image || undefined,
+      },
       timeout: 20_000,
     })
     showSubmit.value = false
@@ -333,7 +405,9 @@ async function pollPayout() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
         <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3m0 0L8 7m4-4 4 4" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
-      Share and earn {{ bounty.referral.percent }}%
+      <!-- A creator earns nothing for referring to their own bounty: self-referral
+           is rejected server-side, so promising a cut here would be a lie. -->
+      {{ bounty.isCreator ? 'Share bounty' : `Share and earn ${bounty.referral.percent}%` }}
     </button>
 
     <!-- Completed -->
@@ -427,14 +501,35 @@ async function pollPayout() {
           >
             {{ entry.link }}
           </a>
-
-          <button
-            v-if="bounty.status !== 'completed' && !bounty.payout && bounty.fundedNim > 0"
-            class="mt-3 min-h-[48px] w-full rounded-xl bg-brand text-[13px] font-bold text-white"
-            @click="confirming = { submissionId: entry.id, address: entry.participantAddress }"
+          <img
+            v-if="entry.image"
+            :src="entry.image"
+            alt="Submitted image"
+            class="mt-2 w-full rounded-xl border border-line"
           >
-            Pay {{ formatNim(payAmount) }} NIM to this wallet
-          </button>
+
+          <!-- Winners can only be paid after entries close. The server enforces
+               this too; leaving the button live while the countdown ran just
+               produced a rejected request. So until the deadline passes the
+               action shows the wait, greyed and inert, rather than inviting a
+               click that cannot work. -->
+          <template v-if="bounty.status !== 'completed' && !bounty.payout && bounty.fundedNim > 0">
+            <button
+              v-if="remaining"
+              type="button"
+              disabled
+              class="mt-3 min-h-[48px] w-full cursor-not-allowed rounded-xl bg-canvas text-[13px] font-semibold text-muted"
+            >
+              Pay out in {{ remaining }}
+            </button>
+            <button
+              v-else
+              class="mt-3 min-h-[48px] w-full rounded-xl bg-brand text-[13px] font-bold text-white"
+              @click="confirming = { submissionId: entry.id, address: entry.participantAddress }"
+            >
+              Pay {{ formatNim(payAmount) }} NIM to this wallet
+            </button>
+          </template>
         </article>
       </div>
     </section>
@@ -444,13 +539,19 @@ async function pollPayout() {
       <div v-if="bounty.mySubmission" class="card px-4 py-4">
         <p class="text-[13px] font-bold">Your submission</p>
         <p class="mt-2 text-[14px] leading-relaxed whitespace-pre-line">{{ bounty.mySubmission.content }}</p>
+        <img
+          v-if="bounty.mySubmission.image"
+          :src="bounty.mySubmission.image"
+          alt="Your attached image"
+          class="mt-3 w-full rounded-xl border border-line"
+        >
         <p class="mt-3 text-[12px] text-muted">
           {{ bounty.mySubmission.status === 'winner' ? 'You won this bounty.' : 'Waiting for the creator to review.' }}
         </p>
         <button
           v-if="bounty.mySubmission.status !== 'winner'"
           class="mt-3 min-h-[48px] w-full rounded-xl bg-canvas text-[13px] font-semibold text-muted"
-          @click="showSubmit = true; submission.content = bounty.mySubmission.content; submission.link = bounty.mySubmission.link ?? ''"
+          @click="showSubmit = true; submission.content = bounty.mySubmission.content; submission.link = bounty.mySubmission.link ?? ''; submission.image = bounty.mySubmission.image ?? ''"
         >
           Edit submission
         </button>
@@ -477,12 +578,40 @@ async function pollPayout() {
           type="url"
           inputmode="url"
           :placeholder="proofLabel"
-          required
           class="min-h-[48px] rounded-xl border border-line bg-canvas px-4 text-sm outline-none focus:border-brand"
         >
         <p v-if="submission.link.trim() && !linkValid" class="-mt-1 text-[12px] text-warn">
           Enter a full link starting with http:// or https://
         </p>
+
+        <!-- Design work is easier to show than to link. An attached image is
+             downscaled in the browser and stored inline, so it counts as proof
+             on its own: a hunter can submit with a link, an image, or both. -->
+        <div v-if="submission.image" class="relative">
+          <img :src="submission.image" alt="Attached preview" class="w-full rounded-xl border border-line">
+          <button
+            type="button"
+            class="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-black/55 text-white"
+            aria-label="Remove image"
+            @click="removeImage"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4">
+              <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <label
+          v-else
+          class="pressable flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-canvas text-[13px] font-semibold text-muted"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+            <path d="M4 16l4-4a2 2 0 0 1 3 0l5 5M14 14l1-1a2 2 0 0 1 3 0l2 2M4 6h16v12H4zM8.5 9a1 1 0 1 0 0-.001Z" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Attach an image
+          <input type="file" accept="image/*" class="hidden" @change="onImagePick">
+        </label>
+        <p v-if="imageError" class="-mt-1 text-[12px] text-warn">{{ imageError }}</p>
+
         <p v-if="submitError" class="rounded-xl bg-danger-soft px-3 py-2.5 text-[13px] text-danger">
           {{ submitError }}
         </p>
