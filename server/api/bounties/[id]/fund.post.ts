@@ -165,6 +165,6 @@ export default defineEventHandler(async (event) => {
     fundedNim: lunaToNim(tx.value),
     blockNumber: tx.blockNumber,
     txHash: tx.hash,
-    explorerUrl: `${useRuntimeConfig().public.explorerBase}/${tx.hash}`,
+    explorerUrl: `${useRuntimeConfig().public.explorerBase}/#${tx.hash}`,
   }
 })

@@ -243,7 +243,7 @@ async function pollFunding(hash: string, memo: string): Promise<string | null> {
 }
 
 const explorerUrl = computed(() =>
-  fundingHash.value ? `${config.public.explorerBase}/${fundingHash.value}` : '',
+  fundingHash.value ? `${config.public.explorerBase}/#${fundingHash.value}` : '',
 )
 
 const passed = computed(() => checks.filter(c => c.status === 'pass').length)

@@ -50,30 +50,66 @@ function normalise(value: string) {
 
 /** Share this bounty, attributing the referral to the sharer. */
 const sharing = ref(false)
+const showShare = ref(false)
+
+/** The link, with the sharer's address as `?ref=` so a win credits them. */
+const shareLink = computed(() => {
+  if (!import.meta.client || !bounty.value) return ''
+  const url = new URL(window.location.href)
+  url.search = ''
+  if (address.value) url.searchParams.set('ref', address.value.replace(/\s+/g, ''))
+  return url.toString()
+})
+
+const shareText = computed(() =>
+  bounty.value
+    ? `There is a ${formatNim(bounty.value.rewardNim)} NIM bounty for this. Think you can solve it?`
+    : '')
+
+/** Prebuilt intent URLs per app, each carrying the text and link so the sharer
+ *  posts something ready to send rather than a bare address. */
+const shareTargets = computed(() => {
+  const text = shareText.value
+  const link = shareLink.value
+  const encoded = encodeURIComponent(`${text} ${link}`)
+  return [
+    { key: 'x', label: 'X', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}` },
+    { key: 'telegram', label: 'Telegram', href: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}` },
+    { key: 'whatsapp', label: 'WhatsApp', href: `https://wa.me/?text=${encoded}` },
+    { key: 'reddit', label: 'Reddit', href: `https://www.reddit.com/submit?url=${encodeURIComponent(link)}&title=${encodeURIComponent(bounty.value?.title ?? text)}` },
+  ]
+})
+
 async function shareBounty() {
   if (sharing.value) return
   sharing.value = true
   try {
-    const url = new URL(window.location.href)
-    url.search = ''
-    if (address.value) url.searchParams.set('ref', address.value.replace(/\s+/g, ''))
-    const link = url.toString()
-    const text = `There is a ${formatNim(bounty.value.rewardNim)} NIM bounty for this. Think you can solve it?`
-
-    if (navigator.share) {
-      await navigator.share({ title: bounty.value.title, text, url: link })
+    // Prefer the native sheet where it exists; it lists every installed app.
+    // Fall back to our own sheet when the webview has no share API, so the
+    // sharer still gets app targets instead of a silent copy.
+    if (import.meta.client && navigator.share) {
+      await navigator.share({ title: bounty.value.title, text: shareText.value, url: shareLink.value })
     }
     else {
-      await navigator.clipboard.writeText(link)
-      toast.success('Link copied')
+      showShare.value = true
     }
   }
   catch (err: any) {
     // A user dismissing the share sheet is a normal action, not a failure.
-    if (err?.name !== 'AbortError') toast.error('Could not share this bounty')
+    if (err?.name !== 'AbortError') showShare.value = true
   }
   finally {
     sharing.value = false
+  }
+}
+
+async function copyShareLink() {
+  try {
+    await navigator.clipboard.writeText(shareLink.value)
+    toast.success('Link copied')
+  }
+  catch {
+    toast.error('Could not copy the link')
   }
 }
 
@@ -82,6 +118,22 @@ const submission = reactive({ content: '', link: '' })
 const submitting = ref(false)
 const submitError = ref('')
 const showSubmit = ref(false)
+
+// Proof of work is required, not optional: a bounty pays real NIM, so a
+// creator needs something to judge. The wording follows the category, since a
+// design brief wants images and a coding one wants a repo.
+const proofLabel = computed(() => {
+  switch (bounty.value?.category) {
+    case 'design': return 'Link to your images or mockups (Figma, Drive, Imgur…)'
+    case 'coding':
+    case 'security': return 'Link to your code (GitHub, GitLab, gist…)'
+    case 'content': return 'Link to your writing (Docs, Notion, published post…)'
+    default: return 'Link to your work'
+  }
+})
+const linkValid = computed(() => /^https?:\/\/\S+$/i.test(submission.link.trim()))
+const canSubmit = computed(() =>
+  submission.content.trim().length >= 3 && linkValid.value)
 
 async function submitWork() {
   if (submitting.value) return
@@ -92,7 +144,7 @@ async function submitWork() {
   try {
     await $fetch(`/api/bounties/${id}/submissions`, {
       method: 'POST',
-      body: { content: submission.content.trim(), link: submission.link.trim() || undefined },
+      body: { content: submission.content.trim(), link: submission.link.trim() },
       timeout: 20_000,
     })
     showSubmit.value = false
@@ -380,9 +432,13 @@ async function pollPayout() {
           v-model="submission.link"
           type="url"
           inputmode="url"
-          placeholder="Link to your work (optional)"
+          :placeholder="proofLabel"
+          required
           class="min-h-[48px] rounded-xl border border-line bg-canvas px-4 text-sm outline-none focus:border-brand"
         >
+        <p v-if="submission.link.trim() && !linkValid" class="-mt-1 text-[12px] text-warn">
+          Enter a full link starting with http:// or https://
+        </p>
         <p v-if="submitError" class="rounded-xl bg-danger-soft px-3 py-2.5 text-[13px] text-danger">
           {{ submitError }}
         </p>
@@ -396,7 +452,7 @@ async function pollPayout() {
           </button>
           <button
             class="pressable min-h-[52px] flex-1 rounded-xl bg-brand text-[13px] font-bold text-white disabled:opacity-40"
-            :disabled="submitting || connecting || submission.content.trim().length < 3 || !isInsideNimiqPay"
+            :disabled="submitting || connecting || !canSubmit || !isInsideNimiqPay"
             @click="submitWork"
           >
             {{ submitting ? 'Submitting…' : 'Submit' }}
@@ -465,6 +521,57 @@ async function pollPayout() {
             {{ paying ? 'Paying…' : payStage === 'failed' ? 'Try again' : 'Confirm payout' }}
           </button>
         </div>
+        </div>
+      </div>
+    </Transition>
+    <!-- Share sheet: shown when the webview has no native share API, so the
+         sharer still gets real app targets and prewritten text. -->
+    <Transition name="sheet">
+      <div
+        v-if="showShare"
+        class="fixed inset-0 z-50 flex items-end bg-black/40 p-3"
+        @click.self="showShare = false"
+      >
+        <div class="sheet-panel mx-auto w-full max-w-lg rounded-2xl bg-surface px-5 py-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-[17px] font-bold">Share this bounty</h3>
+            <button
+              class="pressable -mr-1 flex size-9 items-center justify-center rounded-full text-muted"
+              aria-label="Close"
+              @click="showShare = false"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-4">
+                <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+          <p v-if="bounty.referral?.percent" class="mt-1 text-[13px] leading-relaxed text-muted">
+            Earn {{ bounty.referral.percent }}% if someone you refer wins.
+          </p>
+
+          <div class="mt-4 grid grid-cols-4 gap-2">
+            <a
+              v-for="target in shareTargets"
+              :key="target.key"
+              :href="target.href"
+              target="_blank"
+              rel="noopener"
+              class="pressable flex flex-col items-center gap-1.5 rounded-xl bg-canvas py-3 text-[12px] font-semibold"
+              @click="showShare = false"
+            >
+              {{ target.label }}
+            </a>
+          </div>
+
+          <button
+            class="pressable mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface text-[13px] font-semibold text-ink"
+            @click="copyShareLink"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4">
+              <path d="M9 9h10v10H9zM5 15H4V4h11v1" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Copy link
+          </button>
         </div>
       </div>
     </Transition>

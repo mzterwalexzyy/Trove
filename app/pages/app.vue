@@ -73,9 +73,9 @@ const steps = [
            covering the band makes that ground the band and there is no
            rectangle edge to hide. Anchored right so the chest stays in frame
            as the card narrows. -->
-      <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-        <img :src="'/chest-light.png'" alt="" class="hero-art__light size-full object-cover object-right">
-        <img :src="'/chest-dark.png'" alt="" class="hero-art__dark size-full object-cover object-right">
+      <div class="banner-art pointer-events-none absolute inset-0" aria-hidden="true">
+        <img :src="'/chest-light.png'" alt="" class="banner-art__light size-full object-cover object-right">
+        <img :src="'/chest-dark.png'" alt="" class="banner-art__dark size-full object-cover object-right">
       </div>
 
       <!-- No width caps on a phone: the banner sits below rather than behind,
@@ -175,3 +175,16 @@ const steps = [
     </p>
   </div>
 </template>
+
+<style scoped>
+/* The banner ships its own theme swap. HeroArt.vue carries the equivalent
+   rules but is not mounted here, so without these the light plate always
+   won and dark mode showed the wrong chest. */
+.banner-art img {
+  position: absolute;
+  inset: 0;
+}
+.banner-art__dark { display: none; }
+:root[data-theme='dark'] .banner-art__light { display: none; }
+:root[data-theme='dark'] .banner-art__dark { display: block; }
+</style>

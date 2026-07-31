@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
         (viewer && addressesMatch(s.participantAddress, viewer)) || s.status === 'winner')
 
   const payout = await db.query.payouts.findFirst({ where: eq(payouts.bountyId, id) })
-  const explorer = (hash?: string | null) => hash ? `${config.public.explorerBase}/${hash}` : null
+  const explorer = (hash?: string | null) => hash ? `${config.public.explorerBase}/#${hash}` : null
 
   // Only the viewer's own referral, never anyone else's. Exposing the full
   // list would leak who referred whom, and the public bounty card is meant to

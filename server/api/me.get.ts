@@ -9,7 +9,9 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
   const config = useRuntimeConfig()
-  const explorer = (hash?: string | null) => hash ? `${config.public.explorerBase}/${hash}` : null
+  // nimiq.watch is a hash-routed single page: a transaction lives at
+  // `<base>/#<hash>`, not `<base>/<hash>`. A path URL 404s.
+  const explorer = (hash?: string | null) => hash ? `${config.public.explorerBase}/#${hash}` : null
 
   const created = await db.select().from(bounties)
     .where(eq(bounties.creatorAddress, address))

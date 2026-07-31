@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     tx: {
       ...tx,
       valueNim: lunaToNim(tx.value),
-      explorerUrl: `${config.public.explorerBase}/${tx.hash}`,
+      explorerUrl: `${config.public.explorerBase}/#${tx.hash}`,
     },
   }
 })

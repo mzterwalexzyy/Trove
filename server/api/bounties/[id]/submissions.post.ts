@@ -17,7 +17,12 @@ export default defineEventHandler(async (event) => {
   if (!content || content.length > MAX_CONTENT) {
     throw createError({ statusCode: 400, statusMessage: `Submission must be 1 to ${MAX_CONTENT} characters` })
   }
-  if (link && !/^https?:\/\//i.test(link)) {
+  // Proof of work is required: a bounty pays real NIM, so the creator needs a
+  // link to the actual code, design, or writing to judge against.
+  if (!link) {
+    throw createError({ statusCode: 400, statusMessage: 'A link to your work is required' })
+  }
+  if (!/^https?:\/\//i.test(link)) {
     throw createError({ statusCode: 400, statusMessage: 'Link must start with http:// or https://' })
   }
 

@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
   ])
 
   const config = useRuntimeConfig()
-  const explorer = (hash: string) => `${config.public.explorerBase}/${hash}`
+  const explorer = (hash: string) => `${config.public.explorerBase}/#${hash}`
 
   return {
     txHash: result.txHash,

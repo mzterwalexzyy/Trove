@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const referral = await verifyReferralPayout(bountyId)
 
   const explorer = (v: { txHash?: string }) =>
-    v.txHash ? `${config.public.explorerBase}/${v.txHash}` : null
+    v.txHash ? `${config.public.explorerBase}/#${v.txHash}` : null
 
   return {
     ...verification,
